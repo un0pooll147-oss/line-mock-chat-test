@@ -1374,7 +1374,7 @@ export default function LineMockChatCreator() {
   const messageListBottomPadding = showControls ? 32 : 24;
 
   const controlsContent = showControls ? (
-    <>
+    <div className="flex w-full items-end gap-2">
         <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
         <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
           <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
@@ -1394,7 +1394,6 @@ export default function LineMockChatCreator() {
         </div>
         {inputText.trim() ? <button type="button" onClick={sendInstant} className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-white shadow-sm transition active:scale-95" aria-label="送信"><SendHorizontal className="h-4 w-4" /></button> : <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="マイク"><Mic className="h-5 w-5" /></button>}
       </div>
-    </>
   ) : null;
 
   const controlsPanel = controlsContent ? (
