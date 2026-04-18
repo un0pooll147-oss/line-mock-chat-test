@@ -1597,7 +1597,6 @@ export default function LineMockChatCreator() {
                 <div className="space-y-4">
                   <SectionCard icon={Clock3} title="時刻と表示">
                     <div className="space-y-2"><Label>今日の日付</Label><Input value={todayDate} onChange={(e) => setTodayDate(e.target.value)} placeholder="2026/04/04" /></div>
-                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2"><Label>自分の送信日</Label><Input value={outgoingMessageDate} onChange={(e) => setOutgoingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
                       <div className="space-y-2"><Label>相手の送信日</Label><Input value={incomingMessageDate} onChange={(e) => setIncomingMessageDate(e.target.value)} placeholder="2026/04/04" /></div>
@@ -1799,6 +1798,7 @@ export default function LineMockChatCreator() {
                   </div>
 
                   <SectionCard icon={Settings2} title="操作表示">
+                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={deviceTime} onChange={(e) => setDeviceTime(e.target.value)} placeholder="9:41" /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">上部の時刻や電波表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">メッセージ時刻表示</div><div className="text-xs text-black/50">各吹き出し下の時刻</div></div><Switch checked={showMessageTime} onCheckedChange={setShowMessageTime} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">余白・中央寄せをすべて解除</div></div><Switch checked={fullScreenMode} onCheckedChange={(value) => { setFullScreenMode(value); if (value) setShowStatusBar(false); }} /></div>

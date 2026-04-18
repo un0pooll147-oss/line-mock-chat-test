@@ -44,6 +44,7 @@ type Message = {
 type NotificationSettings = {
   osType: OSType;
   phoneTime: string;
+  showStatusBar: boolean;
   lockscreenTime: string;
   lockscreenDate: string;
   showLargeClock: boolean;
@@ -206,6 +207,7 @@ const defaultMessages: Message[] = [
 const defaultSettings: NotificationSettings = {
   osType: "iphone",
   phoneTime: "22:18",
+  showStatusBar: true,
   lockscreenTime: "22:18",
   lockscreenDate: "4月23日 木曜日",
   showLargeClock: true,
@@ -662,6 +664,7 @@ export default function NotificationCreator() {
 
   const [osType, setOsType] = useState<OSType>(defaultSettings.osType);
   const [phoneTime, setPhoneTime] = useState(defaultSettings.phoneTime);
+  const [showStatusBar, setShowStatusBar] = useState(defaultSettings.showStatusBar);
   const [lockscreenTime, setLockscreenTime] = useState(defaultSettings.lockscreenTime);
   const [lockscreenDate, setLockscreenDate] = useState(defaultSettings.lockscreenDate);
   const [showLargeClock, setShowLargeClock] = useState(defaultSettings.showLargeClock);
@@ -713,6 +716,7 @@ export default function NotificationCreator() {
     const stored = readStoredSettings();
     setOsType(stored.osType);
     setPhoneTime(stored.phoneTime);
+    setShowStatusBar(stored.showStatusBar);
     setLockscreenTime(stored.lockscreenTime);
     setLockscreenDate(stored.lockscreenDate);
     setShowLargeClock(stored.showLargeClock);
@@ -753,6 +757,7 @@ export default function NotificationCreator() {
     const payload: NotificationSettings = {
       osType,
       phoneTime,
+      showStatusBar,
       lockscreenTime,
       lockscreenDate,
       showLargeClock,
@@ -790,6 +795,7 @@ export default function NotificationCreator() {
     hydrated,
     osType,
     phoneTime,
+    showStatusBar,
     lockscreenTime,
     lockscreenDate,
     showLargeClock,
@@ -1233,6 +1239,7 @@ export default function NotificationCreator() {
   const buildCurrentNotificationSettings = (): NotificationSettings => ({
     osType,
     phoneTime,
+    showStatusBar,
     lockscreenTime,
     lockscreenDate,
     showLargeClock,
@@ -1385,6 +1392,7 @@ export default function NotificationCreator() {
     const payload: NotificationSettings = {
       osType,
       phoneTime,
+      showStatusBar,
       lockscreenTime,
       lockscreenDate,
       showLargeClock,
@@ -1429,6 +1437,7 @@ export default function NotificationCreator() {
     clearTimers();
     setOsType(defaultSettings.osType);
     setPhoneTime(defaultSettings.phoneTime);
+    setShowStatusBar(defaultSettings.showStatusBar);
     setLockscreenTime(defaultSettings.lockscreenTime);
     setLockscreenDate(defaultSettings.lockscreenDate);
     setShowLargeClock(defaultSettings.showLargeClock);
@@ -1498,11 +1507,13 @@ export default function NotificationCreator() {
 
       {theme.showNotch && <div className="absolute left-1/2 top-3 z-20 h-[30px] w-[140px] -translate-x-1/2 rounded-full bg-black" />}
 
-      <PhoneStatusBar
-        osType={osType}
-        time={phoneTime}
-        className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
-      />
+      {showStatusBar && (
+        <PhoneStatusBar
+          osType={osType}
+          time={phoneTime}
+          className={cn("absolute inset-x-0 top-0 z-20 pb-3 text-white", theme.topInset)}
+        />
+      )}
 
       {showLargeClock && (
         <div className="absolute inset-x-0 top-0 z-10 pt-[92px] text-center">
@@ -1662,7 +1673,6 @@ export default function NotificationCreator() {
                     <Button onClick={() => setOsType("iphone")} variant={osType === "iphone" ? "default" : "outline"} className="w-full">iPhone風</Button>
                     <Button onClick={() => setOsType("android")} variant={osType === "android" ? "default" : "outline"} className="w-full">Android風</Button>
                   </div>
-                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">大きい時計を表示</div>
@@ -1905,6 +1915,8 @@ export default function NotificationCreator() {
                 </div>
 
                 <SectionCard icon={Settings2} title="画面操作">
+                  <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={phoneTime} onChange={(e) => setPhoneTime(e.target.value)} placeholder="9:41" inputMode="numeric" /></div>
+                  <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={showStatusBar} onCheckedChange={setShowStatusBar} /></div>
                   <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3">
                     <div>
                       <div className="text-sm font-medium">フルスクリーンモード</div>

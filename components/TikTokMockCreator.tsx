@@ -772,10 +772,7 @@ export default function TikTokMockCreator() {
                     <SectionCard icon={Music2} title="投稿内容">
                       <div className="space-y-1"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
                       <div className="space-y-1"><Label>音源表記</Label><Input value={settings.musicTitle} onChange={(e) => update("musicTitle", e.target.value)} /></div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1"><Label>投稿時間</Label><Input value={settings.postTime} onChange={(e) => update("postTime", e.target.value)} /></div>
-                        <div className="space-y-1"><Label>端末時間</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
-                      </div>
+                      <div className="space-y-1"><Label>投稿時間</Label><Input value={settings.postTime} onChange={(e) => update("postTime", e.target.value)} /></div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div>
                         <div className="space-y-1"><Label>コメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div>
@@ -844,6 +841,7 @@ export default function TikTokMockCreator() {
                   <SectionCard icon={Settings2} title="画面表示">
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
+                    <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(value) => update("showSettingsButton", value)} /></div>
                   </SectionCard>

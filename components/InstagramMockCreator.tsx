@@ -69,6 +69,7 @@ type InstagramSettings = {
   storyLiked: boolean;
   storyMessages: string[];
   deviceTime: string;
+  showStatusBar: boolean;
   fullScreenMode: boolean;
   deviceFrameMode: boolean;
   showSettingsButton: boolean;
@@ -156,6 +157,7 @@ const defaultSettings: InstagramSettings = {
   storyLiked: false,
   storyMessages: [],
   deviceTime: "22:18",
+  showStatusBar: true,
   fullScreenMode: false,
   deviceFrameMode: false,
   showSettingsButton: true,
@@ -426,7 +428,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
 
   return (
     <div className={cn("relative flex h-full flex-col", theme.root, theme.text)}>
-      <StatusBar time={settings.deviceTime} className={theme.text} />
+      {settings.showStatusBar && <StatusBar time={settings.deviceTime} className={theme.text} />}
       <div className={cn("flex h-12 items-center justify-between border-b px-4", theme.surface, theme.border)}>
         <div className="text-[22px] font-bold tracking-tight">{settings.appName || "Picgram"}</div>
         <div className="flex items-center gap-4"><Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /></div>
@@ -674,7 +676,7 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
           <div className="absolute inset-0 bg-black/20" />
         </>
       )}
-      <StatusBar time={settings.deviceTime} className="relative z-10 text-white" />
+      {settings.showStatusBar && <StatusBar time={settings.deviceTime} className="relative z-10 text-white" />}
       <div className="relative z-10 px-3 pt-2">
         <div className="flex gap-1">
           {Array.from({ length: storyCount }).map((_, index) => {
@@ -1132,8 +1134,9 @@ export default function InstagramMockCreator() {
                   <SectionCard icon={Settings2} title="撮影表示">
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={enterFullscreenIfNeeded} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ画面として表示</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(v) => update("deviceFrameMode", v)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(v) => update("showSettingsButton", v)} /></div>
-                    <div className="space-y-2"><Label>端末時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
+                    <div className="space-y-2"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(v) => update("showStatusBar", v)} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダで設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(v) => update("showSettingsButton", v)} /></div>
                   </SectionCard>
 
                   <SectionCard icon={Palette} title="初期化">
