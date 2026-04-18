@@ -169,6 +169,8 @@ const defaultSettings: InstagramSettings = {
 
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
 
+const isVideoUrl = (url: string | null | undefined) => Boolean(url && (url.startsWith("data:video/") || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)));
+
 const readStoredSettings = (): InstagramSettings => {
   if (typeof window === "undefined") return defaultSettings;
   try {
@@ -447,9 +449,13 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
 
         <div className="relative">
           {currentPostImage ? (
-            <img src={currentPostImage} alt="post" className="aspect-square w-full object-cover" />
+            isVideoUrl(currentPostImage) ? (
+              <video src={currentPostImage} className="aspect-square w-full object-cover" autoPlay muted loop playsInline />
+            ) : (
+              <img src={currentPostImage} alt="post" className="aspect-square w-full object-cover" />
+            )
           ) : (
-            <EmptyImage label="投稿画像を設定できます" themeKey={settings.themeKey} />
+            <EmptyImage label="投稿画像・動画を設定できます" themeKey={settings.themeKey} />
           )}
 
           {postImages.length > 1 && (
@@ -596,7 +602,9 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
   const textY = Math.max(0, Math.min(100, Number(settings.storyTextY) || 50));
   const textSize = Math.max(12, Math.min(72, Number(settings.storyTextSize) || 24));
 
-  const storyStyle = currentStoryImage
+  const currentStoryIsVideo = isVideoUrl(currentStoryImage);
+
+  const storyStyle = currentStoryImage && !currentStoryIsVideo
     ? { backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,.28)), url(${currentStoryImage})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { background: "linear-gradient(135deg, #f97316, #db2777, #7c3aed)" };
 
@@ -664,7 +672,13 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-black text-white" style={storyStyle}>
-      <StatusBar time={settings.deviceTime} className="text-white" />
+      {currentStoryIsVideo && currentStoryImage && (
+        <>
+          <video src={currentStoryImage} className="absolute inset-0 h-full w-full object-cover" autoPlay muted loop playsInline />
+          <div className="absolute inset-0 bg-black/20" />
+        </>
+      )}
+      <StatusBar time={settings.deviceTime} className="relative z-10 text-white" />
       <div className="relative z-10 px-3 pt-2">
         <div className="flex gap-1">
           {Array.from({ length: storyCount }).map((_, index) => {
@@ -801,7 +815,7 @@ export default function InstagramMockCreator() {
   };
 
   const handlePostImagesUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"));
     if (files.length === 0) return;
 
     Promise.all(files.map((file) => new Promise<string>((resolve) => {
@@ -820,7 +834,7 @@ export default function InstagramMockCreator() {
 
 
   const handleStoryImagesUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/") || file.type.startsWith("video/"));
     if (files.length === 0) return;
 
     Promise.all(files.map((file) => new Promise<string>((resolve) => {
@@ -995,7 +1009,7 @@ export default function InstagramMockCreator() {
 
                   {settings.screenType === "post" ? (
                     <SectionCard icon={ImageIcon} title="投稿内容">
-                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿画像</FileButton><MultiFileButton accept="image/*" onFiles={handlePostImagesUpload}>複数画像</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">複数画像を選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
+                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿メディア</FileButton><MultiFileButton accept="image/*,video/*" onFiles={handlePostImagesUpload}>複数メディア</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">画像・動画を複数選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
                       <div className="space-y-2"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
                       <div className="grid grid-cols-3 gap-3"><div className="space-y-2"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div><div className="space-y-2"><Label>コメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div><div className="space-y-2"><Label>リポスト数</Label><Input value={settings.repostCount} onChange={(e) => update("repostCount", e.target.value)} /></div></div>
                       <div className="space-y-2"><Label>投稿時刻</Label><Input value={settings.postTime} onChange={(e) => update("postTime", e.target.value)} /></div>
@@ -1003,11 +1017,11 @@ export default function InstagramMockCreator() {
                   ) : (
                     <SectionCard icon={ImageIcon} title="ストーリー内容">
                       <div className="flex flex-wrap items-center gap-3">
-                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "storyImage")}>背景画像</FileButton>
-                        <MultiFileButton accept="image/*" onFiles={handleStoryImagesUpload}>複数画像</MultiFileButton>
+                        <FileButton accept="image/*,video/*" onFile={(e) => handleImageUpload(e, "storyImage")}>背景メディア</FileButton>
+                        <MultiFileButton accept="image/*,video/*" onFiles={handleStoryImagesUpload}>複数メディア</MultiFileButton>
                         <Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, storyImage: null, storyImages: [] }))}>解除</Button>
                       </div>
-                      <div className="text-xs text-black/50">複数画像を選ぶと、枚数に合わせて上部バーが増減し、自動で次の画像へ進みます。</div>
+                      <div className="text-xs text-black/50">画像・動画を複数選ぶと、枚数に合わせて上部バーが増減し、自動で次のメディアへ進みます。</div>
                       <div className="space-y-2"><Label>バーがいっぱいになる秒数</Label><Input type="number" min="1" step="0.5" value={settings.storyDurationSeconds} onChange={(e) => update("storyDurationSeconds", Number(e.target.value) || 1)} /></div>
                       <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">テキストを表示する</div><div className="text-xs text-black/50">OFFにすると画像だけのストーリーになります</div></div><Switch checked={settings.storyShowText !== false} onCheckedChange={(v) => update("storyShowText", v)} /></div>
                       <div className="space-y-2"><Label>テキスト</Label><Textarea value={settings.storyText} onChange={(e) => update("storyText", e.target.value)} /></div>

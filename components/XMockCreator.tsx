@@ -339,6 +339,10 @@ function readImageFiles(files: FileList | null, callback: (dataUrls: string[]) =
   ).then((urls) => callback(urls.filter(Boolean)));
 }
 
+function isVideoUrl(url: string) {
+  return url.startsWith("data:video/") || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
+}
+
 function Avatar({ image, label, size = "h-11 w-11", className = "" }: { image: string | null; label: string; size?: string; className?: string }) {
   return (
     <div className={cls(size, "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-sm font-bold text-white", className)}>
@@ -407,7 +411,11 @@ function ImageGrid({ images, currentImageIndex, setCurrentImageIndex }: { images
   const currentImage = images[Math.max(0, Math.min(currentImageIndex, images.length - 1))];
   return (
     <div className="relative mt-3 overflow-hidden rounded-3xl border border-current/10 bg-black">
-      <img src={currentImage} alt="投稿画像" className="aspect-[4/3] w-full object-cover" />
+      {isVideoUrl(currentImage) ? (
+        <video src={currentImage} className="aspect-[4/3] w-full object-cover" autoPlay muted loop playsInline />
+      ) : (
+        <img src={currentImage} alt="投稿画像" className="aspect-[4/3] w-full object-cover" />
+      )}
       {images.length > 1 && (
         <>
           <div className="absolute right-3 top-3 rounded-full bg-black/65 px-2 py-1 text-xs font-bold text-white">{currentImageIndex + 1}/{images.length}</div>
@@ -426,7 +434,7 @@ export default function XMockCreator() {
   const router = useRouter();
   const [settings, setSettings] = useState<XSettings>(initialSettings);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [replyPanelOpen, setReplyPanelOpen] = useState(false);
   const [presetName, setPresetName] = useState("X投稿_01");
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
@@ -711,8 +719,8 @@ export default function XMockCreator() {
           </>
         )}
       </div>
-      {settings.showSettingsButton && (
-        <button type="button" onClick={() => setSettingsOpen(true)} className="absolute bottom-4 right-4 grid h-12 w-12 place-items-center rounded-full bg-black text-white shadow-lg"><Settings2 className="h-5 w-5" /></button>
+      {!settingsOpen && (settings.showSettingsButton || settings.fullScreenMode) && (
+        <button type="button" onClick={() => setSettingsOpen(true)} className="absolute bottom-4 right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-black text-white shadow-lg"><Settings2 className="h-5 w-5" /></button>
       )}
     </div>
   );
@@ -728,8 +736,8 @@ export default function XMockCreator() {
       <div className={cls("grid min-h-screen gap-6 p-4", settings.fullScreenMode ? "grid-cols-1 p-0" : "lg:grid-cols-[420px_1fr]")}> 
         <section className={cls("flex items-start justify-center", settings.fullScreenMode ? "" : "lg:sticky lg:top-4")}>{phone}</section>
 
-        {!settings.fullScreenMode && settingsOpen && (
-          <aside className="rounded-[32px] bg-white/85 p-4 shadow-xl backdrop-blur lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+        {settingsOpen && (
+          <aside className={cls(settings.fullScreenMode ? "fixed bottom-4 right-4 top-4 z-50 w-[min(430px,calc(100vw-32px))] overflow-y-auto rounded-[32px] bg-white/95 p-4 shadow-2xl backdrop-blur" : "rounded-[32px] bg-white/85 p-4 shadow-xl backdrop-blur lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto")}>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-xl font-black">Xモード</h1>
@@ -779,9 +787,9 @@ export default function XMockCreator() {
                       <Field label="投稿時刻" value={settings.postTime} onChange={(v) => update("postTime", v)} />
                       <Field label="投稿日" value={settings.postDate} onChange={(v) => update("postDate", v)} />
                     </div>
-                    <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿画像（複数可）</span><input type="file" accept="image/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { update("postImages", [...settings.postImages, ...urls]); update("currentImageIndex", 0); })} className="text-xs" /></label>
+                    <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { update("postImages", [...settings.postImages, ...urls]); update("currentImageIndex", 0); })} className="text-xs" /></label>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" onClick={() => update("postImages", [])}><Trash2 className="h-4 w-4" />画像を全削除</Button>
+                      <Button variant="outline" onClick={() => update("postImages", [])}><Trash2 className="h-4 w-4" />メディアを全削除</Button>
                       <Button variant="outline" onClick={() => update("currentImageIndex", 0)}><ImageIcon className="h-4 w-4" />1枚目へ</Button>
                     </div>
                   </SectionCard>
@@ -846,9 +854,9 @@ export default function XMockCreator() {
                         </div>
                         <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateTimelinePost(post.id, "avatarImage", url))} className="text-xs" /></label>
                         <TextArea label="本文" value={post.text} onChange={(v) => updateTimelinePost(post.id, "text", v)} rows={4} />
-                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿画像（複数可）</span><input type="file" accept="image/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateTimelinePost(post.id, "images", [...post.images, ...urls]); updateTimelinePost(post.id, "currentImageIndex", 0); })} className="text-xs" /></label>
+                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateTimelinePost(post.id, "images", [...post.images, ...urls]); updateTimelinePost(post.id, "currentImageIndex", 0); })} className="text-xs" /></label>
                         <div className="flex flex-wrap gap-2">
-                          <Button variant="outline" onClick={() => updateTimelinePost(post.id, "images", [])}>画像を全削除</Button>
+                          <Button variant="outline" onClick={() => updateTimelinePost(post.id, "images", [])}>メディアを全削除</Button>
                           <Button variant={post.verified ? "primary" : "outline"} onClick={() => updateTimelinePost(post.id, "verified", !post.verified)}>認証バッジ</Button>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -926,7 +934,7 @@ export default function XMockCreator() {
                     <Field label="背景色" value={settings.bgColor} onChange={(v) => update("bgColor", v)} />
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">撮影時に非表示推奨</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">通常表示時のみ非表示可。フルスクリーン時は復帰用に表示</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーン</div><div className="text-xs text-black/50">スマホ枠と設定画面を外す</div></div><Switch checked={settings.fullScreenMode} onChange={(v) => update("fullScreenMode", v)} /></div>
                   </SectionCard>
                 </>
