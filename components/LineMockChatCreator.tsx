@@ -1375,14 +1375,6 @@ export default function LineMockChatCreator() {
 
   const controlsContent = showControls ? (
     <>
-      {showNotificationModeButton && (
-        <div className="mb-1 flex justify-end">
-          <button type="button" onClick={() => router.push("/notification")} className="flex items-center gap-1 rounded-full bg-black/8 px-3 py-1 text-xs text-black/55 transition hover:bg-black/12">
-            通知画面モードへ →
-          </button>
-        </div>
-      )}
-      <div className="flex items-end gap-2">
         <button type="button" className="mb-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-black/55 transition hover:bg-black/5" aria-label="スタンプや絵文字"><Smile className="h-5 w-5" /></button>
         <div className="flex min-h-[44px] flex-1 items-end rounded-[22px] border border-black/10 bg-white px-3 py-2 shadow-sm">
           <input ref={outgoingImageInputRef} type="file" accept="image/*" onChange={handleOutgoingImageUpload} className="hidden" />
@@ -1815,7 +1807,6 @@ export default function LineMockChatCreator() {
 
 
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">下部の操作バー表示</div><div className="text-xs text-black/50">素材として書き出す前に隠せる</div></div><Switch checked={showControls} onCheckedChange={setShowControls} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">通知画面モードボタン表示</div><div className="text-xs text-black/50">下部バーの通知画面への切り替えボタン</div></div><Switch checked={showNotificationModeButton} onCheckedChange={setShowNotificationModeButton} /></div>
 
                   </SectionCard>
 

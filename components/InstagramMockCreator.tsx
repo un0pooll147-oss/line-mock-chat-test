@@ -440,7 +440,7 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
               <div className={cn("text-xs", theme.muted)}>{settings.displayName}</div>
             </div>
           </div>
-          <MoreHorizontal className="h-5 w-5" />
+          <button type="button" onClick={() => setSettingsOpen(true)} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
         </div>
 
         <div className="relative">
@@ -1136,7 +1136,6 @@ export default function InstagramMockCreator() {
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">デバイスフレーム</div><div className="text-xs text-black/50">黒フチのスマホ画面として表示</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(v) => update("showSettingsButton", v)} /></div>
                     <div className="space-y-2"><Label>端末時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>外側背景色</Label><Input type="color" value={settings.bgColor} onChange={(e) => update("bgColor", e.target.value)} className="h-12 p-1" /></div>
                   </SectionCard>
 
                   <SectionCard icon={Palette} title="初期化">
