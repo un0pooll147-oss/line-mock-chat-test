@@ -1782,7 +1782,7 @@ export default function LineMockChatCreator() {
                       <Button onClick={() => router.push("/notification")} variant="outline" className="w-full justify-center">通知画面モードへ</Button>
                       <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
                       <Button onClick={() => router.push("/x")} variant="outline" className="w-full justify-center">Xモードへ</Button>
-                      <Button disabled variant="outline" className="w-full justify-center">TikTokモード（準備中）</Button>
+                      <Button onClick={() => router.push("/tiktok")} variant="outline" className="w-full justify-center">TikTokモードへ</Button>
                     </div>
                   </SectionCard>
                 </div>

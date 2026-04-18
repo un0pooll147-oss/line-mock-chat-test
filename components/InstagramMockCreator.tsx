@@ -1147,7 +1147,7 @@ export default function InstagramMockCreator() {
                     <Button variant="outline" onClick={() => router.push("/notification")}>通知画面モードへ</Button>
                     <Button>Instagramモード</Button>
                     <Button variant="outline" onClick={() => router.push("/x")}>Xモードへ</Button>
-                    <Button variant="outline" disabled>TikTokモード（準備中）</Button>
+                    <Button variant="outline" onClick={() => router.push("/tiktok")}>TikTokモードへ</Button>
                   </div>
                 </SectionCard>
               )}

@@ -1236,7 +1236,7 @@ export default function XMockCreator() {
                     <Button variant="outline" onClick={() => router.push("/notification")}>通知画面モードへ</Button>
                     <Button variant="outline" onClick={() => router.push("/instagram")}>Instagramモードへ</Button>
                     <Button>Xモード</Button>
-                    <Button disabled variant="outline">TikTokモード（準備中）</Button>
+                    <Button variant="outline" onClick={() => router.push("/tiktok")}>TikTokモードへ</Button>
                   </div>
                 </SectionCard>
               )}
