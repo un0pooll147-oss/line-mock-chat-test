@@ -83,6 +83,7 @@ type XSettings = {
   screenType: XScreenType;
   themeKey: XThemeKey;
   appName: string;
+  showScreenLabel: boolean;
   displayName: string;
   username: string;
   verified: boolean;
@@ -106,6 +107,7 @@ type XSettings = {
   replyAvatarLabel: string;
   replyAvatarImage: string | null;
   replyInput: string;
+  replyTime: string;
   replies: ReplyItem[];
   notificationTitle: string;
   notificationText: string;
@@ -118,6 +120,8 @@ type XSettings = {
   profileFollowerCount: string;
   profilePostCount: string;
   profileCoverImage: string | null;
+  profileFollowed: boolean;
+  profilePosts: TimelinePost[];
   deviceTime: string;
   showStatusBar: boolean;
   fullScreenMode: boolean;
@@ -133,6 +137,7 @@ const initialSettings: XSettings = {
   screenType: "timeline",
   themeKey: "light",
   appName: "Postly",
+  showScreenLabel: true,
   displayName: "青井 映",
   username: "aoi_scene",
   verified: false,
@@ -156,6 +161,7 @@ const initialSettings: XSettings = {
   replyAvatarLabel: "G",
   replyAvatarImage: null,
   replyInput: "これ、続きが気になる。",
+  replyTime: "今",
   replies: [
     { id: "r1", username: "ren_film", displayName: "Ren", avatarLabel: "R", avatarImage: null, text: "この一文だけで物語が始まりそう。", time: "3分", liked: false, likeCount: 4 },
     { id: "r2", username: "mika_story", displayName: "Mika", avatarLabel: "M", avatarImage: null, text: "撮影用ならかなり自然に見えるね。", time: "12分", liked: false, likeCount: 9 },
@@ -178,6 +184,10 @@ const initialSettings: XSettings = {
   profileFollowerCount: "3,482",
   profilePostCount: "248",
   profileCoverImage: null,
+  profileFollowed: false,
+  profilePosts: [
+    { id: "p1", displayName: "青井 映", username: "aoi_scene", avatarLabel: "A", avatarImage: null, verified: false, text: "プロフィール専用の投稿です。タイムラインとは別に作成・編集できます。", time: "固定", images: [], currentImageIndex: 0, replyCount: 3, repostCount: 12, likeCount: 64, viewCount: "1,248", liked: false, reposted: false, bookmarked: false },
+  ],
   deviceTime: "21:12",
   showStatusBar: true,
   fullScreenMode: false,
@@ -200,7 +210,7 @@ const themes: Record<XThemeKey, {
   input: string;
 }> = {
   light: {
-    label: "X風ライト",
+    label: "基本",
     page: "bg-slate-100",
     phone: "bg-white",
     panel: "bg-white",
@@ -213,7 +223,7 @@ const themes: Record<XThemeKey, {
     input: "bg-white border-slate-200 text-slate-950 placeholder:text-slate-400",
   },
   dark: {
-    label: "ダークモード",
+    label: "ダークテーマ",
     page: "bg-zinc-950",
     phone: "bg-black",
     panel: "bg-black",
@@ -232,6 +242,10 @@ function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSett
   if (merged.themeKey !== "dark") merged.themeKey = "light";
   if ((merged as any).screenType === "detail") merged.screenType = "timeline";
   if (!["timeline", "notifications", "profile"].includes(merged.screenType)) merged.screenType = "timeline";
+  if (!Array.isArray(merged.profilePosts)) merged.profilePosts = [];
+  if (typeof (merged as any).profileFollowed !== "boolean") merged.profileFollowed = false;
+  if (!(merged as any).replyTime) merged.replyTime = "今";
+  if (typeof (merged as any).showScreenLabel !== "boolean") merged.showScreenLabel = true;
   return merged;
 }
 
@@ -322,32 +336,32 @@ function Avatar({ image, label, size = "h-11 w-11", className = "" }: { image: s
 }
 
 function Button({ children, onClick, variant = "primary", className = "", disabled = false }: { children: React.ReactNode; onClick?: () => void; variant?: "primary" | "outline" | "ghost" | "danger"; className?: string; disabled?: boolean }) {
-  const base = "inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45";
+  const base = "inline-flex min-h-10 min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal break-words rounded-2xl px-4 py-2 text-center text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45";
   const styles = variant === "primary" ? "bg-black text-white hover:bg-black/85" : variant === "danger" ? "bg-red-500 text-white hover:bg-red-600" : variant === "ghost" ? "bg-transparent text-black hover:bg-black/5" : "border border-black/10 bg-white text-black hover:bg-black/5";
   return <button type="button" onClick={onClick} disabled={disabled} className={cls(base, styles, className)}>{children}</button>;
 }
 
 function Field({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; type?: string }) {
   return (
-    <label className="grid gap-1.5 text-sm font-semibold text-black/70">
+    <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70">
       <span>{label}</span>
-      <input value={value} type={type} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10" />
+      <input value={value} type={type} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="w-full min-w-0 rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10" />
     </label>
   );
 }
 
 function TextArea({ label, value, onChange, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; rows?: number }) {
   return (
-    <label className="grid gap-1.5 text-sm font-semibold text-black/70">
+    <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70">
       <span>{label}</span>
-      <textarea value={value} rows={rows} onChange={(e) => onChange(e.target.value)} className="rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10" />
+      <textarea value={value} rows={rows} onChange={(e) => onChange(e.target.value)} className="w-full min-w-0 rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10" />
     </label>
   );
 }
 
 function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
+    <section className="min-w-0 overflow-hidden rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-black/75"><Icon className="h-4 w-4" />{title}</div>
       <div className="grid gap-3">{children}</div>
     </section>
@@ -355,7 +369,7 @@ function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType;
 }
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={cls("rounded-full px-3 py-2 text-xs font-bold transition", active ? "bg-black text-white" : "bg-white text-black/60 hover:bg-black/5")}>{children}</button>;
+  return <button type="button" onClick={onClick} className={cls("min-w-0 rounded-full px-2.5 py-2 text-xs font-bold leading-tight transition", active ? "bg-black text-white" : "bg-white text-black/60 hover:bg-black/5")}>{children}</button>;
 }
 
 function Switch({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
@@ -448,7 +462,7 @@ export default function XMockCreator() {
       avatarLabel: settings.replyAvatarLabel || "G",
       avatarImage: settings.replyAvatarImage,
       text,
-      time: "今",
+      time: settings.replyTime || "今",
       liked: false,
       likeCount: 0,
     };
@@ -458,6 +472,10 @@ export default function XMockCreator() {
   };
 
   const deleteReply = (id: string) => update("replies", settings.replies.filter((reply) => reply.id !== id));
+
+  const updateReply = <K extends keyof ReplyItem>(id: string, key: K, value: ReplyItem[K]) => {
+    update("replies", settings.replies.map((reply) => reply.id === id ? { ...reply, [key]: value } : reply));
+  };
 
   const updateTimelinePost = <K extends keyof TimelinePost>(id: string, key: K, value: TimelinePost[K]) => {
     update("timelinePosts", settings.timelinePosts.map((post) => post.id === id ? { ...post, [key]: value } : post));
@@ -487,6 +505,35 @@ export default function XMockCreator() {
   };
 
   const deleteTimelinePost = (id: string) => update("timelinePosts", settings.timelinePosts.filter((post) => post.id !== id));
+
+  const updateProfilePost = <K extends keyof TimelinePost>(id: string, key: K, value: TimelinePost[K]) => {
+    update("profilePosts", settings.profilePosts.map((post) => post.id === id ? { ...post, [key]: value } : post));
+  };
+
+  const addProfilePost = () => {
+    const post: TimelinePost = {
+      id: String(Date.now()),
+      displayName: settings.displayName || "profile user",
+      username: settings.username || "profile_user",
+      avatarLabel: settings.avatarLabel || "P",
+      avatarImage: settings.avatarImage,
+      verified: settings.verified,
+      text: "プロフィール専用の新しい投稿です。",
+      time: "今",
+      images: [],
+      currentImageIndex: 0,
+      replyCount: 0,
+      repostCount: 0,
+      likeCount: 0,
+      viewCount: "0",
+      liked: false,
+      reposted: false,
+      bookmarked: false,
+    };
+    update("profilePosts", [post, ...settings.profilePosts]);
+  };
+
+  const deleteProfilePost = (id: string) => update("profilePosts", settings.profilePosts.filter((post) => post.id !== id));
 
   const updateNotification = <K extends keyof NotificationItem>(id: string, key: K, value: NotificationItem[K]) => {
     update("notifications", settings.notifications.map((item) => item.id === id ? { ...item, [key]: value } : item));
@@ -538,7 +585,7 @@ export default function XMockCreator() {
         </button>
         <div className="min-w-0 max-w-[62%] text-center">
           <div className="truncate text-[16px] font-black leading-tight">{settings.appName}</div>
-          <div className={cls("mt-0.5 text-[10px]", theme.sub)}>{settings.screenType === "notifications" ? "通知" : settings.screenType === "profile" ? "プロフィール" : "タイムライン"}</div>
+          {settings.showScreenLabel && <div className={cls("mt-0.5 text-[10px]", theme.sub)}>{settings.screenType === "notifications" ? "通知" : settings.screenType === "profile" ? "プロフィール" : "タイムライン"}</div>}
         </div>
         <div className="absolute right-4 flex items-center gap-3">
           <Search className="h-5 w-5" />
@@ -617,7 +664,7 @@ export default function XMockCreator() {
     </div>
   );
 
-  const timelinePostBlock = (post: TimelinePost) => (
+  const timelinePostBlock = (post: TimelinePost, updater: <K extends keyof TimelinePost>(id: string, key: K, value: TimelinePost[K]) => void = updateTimelinePost) => (
     <article key={post.id} className={cls("border-b px-4 py-4", theme.border)}>
       <div className="flex items-start gap-3">
         <Avatar image={post.avatarImage} label={post.avatarLabel} />
@@ -629,13 +676,13 @@ export default function XMockCreator() {
             <span className={cls("text-sm", theme.sub)}>· {post.time}</span>
           </div>
           <div className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{post.text}</div>
-          <ImageGrid images={post.images} currentImageIndex={post.currentImageIndex} setCurrentImageIndex={(index) => updateTimelinePost(post.id, "currentImageIndex", index)} />
+          <ImageGrid images={post.images} currentImageIndex={post.currentImageIndex} setCurrentImageIndex={(index) => updater(post.id, "currentImageIndex", index)} />
           <div className="mt-3 flex items-center justify-between">
             <ActionStat icon={MessageCircle} value={post.replyCount} />
-            <ActionStat icon={Repeat2} value={post.repostCount + (post.reposted ? 1 : 0)} active={post.reposted} activeClass="text-green-500" onClick={() => updateTimelinePost(post.id, "reposted", !post.reposted)} />
-            <ActionStat icon={Heart} value={post.likeCount + (post.liked ? 1 : 0)} active={post.liked} activeClass="text-pink-500" onClick={() => updateTimelinePost(post.id, "liked", !post.liked)} />
+            <ActionStat icon={Repeat2} value={post.repostCount + (post.reposted ? 1 : 0)} active={post.reposted} activeClass="text-green-500" onClick={() => updater(post.id, "reposted", !post.reposted)} />
+            <ActionStat icon={Heart} value={post.likeCount + (post.liked ? 1 : 0)} active={post.liked} activeClass="text-pink-500" onClick={() => updater(post.id, "liked", !post.liked)} />
             <ActionStat icon={BarChart3} value={post.viewCount} />
-            <button type="button" onClick={() => updateTimelinePost(post.id, "bookmarked", !post.bookmarked)} className={cls("transition", post.bookmarked ? "text-sky-500" : "opacity-70 hover:opacity-100")}><Bookmark className={cls("h-[18px] w-[18px]", post.bookmarked ? "fill-current" : "")} /></button>
+            <button type="button" onClick={() => updater(post.id, "bookmarked", !post.bookmarked)} className={cls("transition", post.bookmarked ? "text-sky-500" : "opacity-70 hover:opacity-100")}><Bookmark className={cls("h-[18px] w-[18px]", post.bookmarked ? "fill-current" : "")} /></button>
           </div>
         </div>
       </div>
@@ -685,7 +732,13 @@ export default function XMockCreator() {
         <div className="px-4 pb-4">
           <div className="-mt-10 flex items-end justify-between">
             <Avatar image={settings.avatarImage} label={settings.avatarLabel} size="h-20 w-20" className="border-4 border-current/10" />
-            <button type="button" className={cls("rounded-full border px-4 py-1.5 text-sm font-black", theme.border)}>編集</button>
+            <button
+              type="button"
+              onClick={() => update("profileFollowed", !settings.profileFollowed)}
+              className={cls("rounded-full border px-4 py-1.5 text-sm font-black transition", settings.profileFollowed ? "bg-transparent" : theme.button, settings.profileFollowed ? theme.border : "border-transparent")}
+            >
+              {settings.profileFollowed ? "フォロー中" : "フォロー"}
+            </button>
           </div>
           <div className="mt-3 flex items-center gap-1">
             <h2 className="text-xl font-black leading-tight">{settings.displayName}</h2>
@@ -708,8 +761,9 @@ export default function XMockCreator() {
           <div className={cls("py-3", theme.sub)}>メディア</div>
         </div>
       </div>
-      {postBlock(true)}
-      {settings.timelinePosts.map((post) => timelinePostBlock(post))}
+      {settings.profilePosts.length === 0 ? (
+        <div className="px-4 py-8 text-center text-sm opacity-50">プロフィール投稿はありません</div>
+      ) : settings.profilePosts.map((post) => timelinePostBlock(post, updateProfilePost))}
     </div>
   );
   const phoneContent = (
@@ -744,14 +798,14 @@ export default function XMockCreator() {
 
         {settingsOpen && (
           <div className="fixed inset-0 z-50 bg-black/35">
-            <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black">
+            <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md min-w-0 flex-col overflow-hidden rounded-t-[28px] bg-[#fafafa] px-4 pt-4 text-black shadow-2xl">
               <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
                 <button type="button" onClick={() => setSettingsOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]" aria-label="閉じる"><XIcon className="h-5 w-5" /></button>
                 <div className="text-lg font-semibold">設定</div>
                 <div className="h-10 w-10" aria-hidden="true" />
               </div>
 
-              <div className="grid shrink-0 grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
+              <div className="grid shrink-0 grid-cols-4 gap-1 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "replies"} onClick={() => setActiveTab("replies")}>返信</TabButton>
                 <TabButton active={activeTab === "timeline"} onClick={() => setActiveTab("timeline")}>TL</TabButton>
@@ -762,39 +816,40 @@ export default function XMockCreator() {
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
-              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
+              <div className="mt-4 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
                 <div className="grid gap-4">
               {activeTab === "create" && (
                 <>
                   <SectionCard icon={Palette} title="表示タイプ / テーマ">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       {(["timeline", "notifications", "profile"] as XScreenType[]).map((type) => <Button key={type} variant={settings.screenType === type ? "primary" : "outline"} onClick={() => update("screenType", type)} className="px-2">{type === "timeline" ? "タイムライン" : type === "notifications" ? "通知" : "プロフィール"}</Button>)}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {(Object.keys(themes) as XThemeKey[]).map((key) => <Button key={key} variant={settings.themeKey === key ? "primary" : "outline"} onClick={() => update("themeKey", key)}>{themes[key].label}</Button>)}
                     </div>
                     <Field label="アプリ名" value={settings.appName} onChange={(v) => update("appName", v)} />
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div className="min-w-0"><div className="text-sm font-bold">画面名表記</div><div className="text-xs text-black/50">Postly下の「タイムライン / 通知 / プロフィール」を表示</div></div><Switch checked={settings.showScreenLabel} onChange={(v) => update("showScreenLabel", v)} /></div>
                   </SectionCard>
 
                   <SectionCard icon={UserCircle2} title="投稿ユーザー">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="表示名" value={settings.displayName} onChange={(v) => update("displayName", v)} />
                       <Field label="ユーザー名" value={settings.username} onChange={(v) => update("username", v)} />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="アイコン文字" value={settings.avatarLabel} onChange={(v) => update("avatarLabel", v.slice(0, 2))} />
-                      <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("avatarImage", url))} className="text-xs" /></label>
+                      <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                     </div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">認証バッジ</div><div className="text-xs text-black/50">青いチェックを表示</div></div><Switch checked={settings.verified} onChange={(v) => update("verified", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">認証バッジ</div><div className="text-xs text-black/50">青いチェックを表示</div></div><Switch checked={settings.verified} onChange={(v) => update("verified", v)} /></div>
                   </SectionCard>
 
                   <SectionCard icon={MessageCircle} title="投稿内容">
                     <TextArea label="本文" value={settings.postText} onChange={(v) => update("postText", v)} rows={5} />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="投稿時刻" value={settings.postTime} onChange={(v) => update("postTime", v)} />
                       <Field label="投稿日" value={settings.postDate} onChange={(v) => update("postDate", v)} />
                     </div>
-                    <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { update("postImages", [...settings.postImages, ...urls]); update("currentImageIndex", 0); })} className="text-xs" /></label>
+                    <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { update("postImages", [...settings.postImages, ...urls]); update("currentImageIndex", 0); })} className="w-full min-w-0 text-xs" /></label>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" onClick={() => update("postImages", [])}><Trash2 className="h-4 w-4" />メディアを全削除</Button>
                       <Button variant="outline" onClick={() => update("currentImageIndex", 0)}><ImageIcon className="h-4 w-4" />1枚目へ</Button>
@@ -802,14 +857,14 @@ export default function XMockCreator() {
                   </SectionCard>
 
                   <SectionCard icon={BarChart3} title="数値 / 操作状態">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="返信数" type="number" value={String(settings.replyCount)} onChange={(v) => update("replyCount", Number(v) || 0)} />
                       <Field label="リポスト数" type="number" value={String(settings.repostCount)} onChange={(v) => update("repostCount", Number(v) || 0)} />
                       <Field label="引用数" type="number" value={String(settings.quoteCount)} onChange={(v) => update("quoteCount", Number(v) || 0)} />
                       <Field label="いいね数" type="number" value={String(settings.likeCount)} onChange={(v) => update("likeCount", Number(v) || 0)} />
                       <Field label="表示数" value={settings.viewCount} onChange={(v) => update("viewCount", v)} />
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       <Button variant={settings.liked ? "primary" : "outline"} onClick={() => update("liked", !settings.liked)}>いいね</Button>
                       <Button variant={settings.reposted ? "primary" : "outline"} onClick={() => update("reposted", !settings.reposted)}>リポスト</Button>
                       <Button variant={settings.bookmarked ? "primary" : "outline"} onClick={() => update("bookmarked", !settings.bookmarked)}>保存</Button>
@@ -821,22 +876,34 @@ export default function XMockCreator() {
               {activeTab === "replies" && (
                 <>
                   <SectionCard icon={Send} title="返信するユーザー">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="表示名" value={settings.replyDisplayName} onChange={(v) => update("replyDisplayName", v)} />
                       <Field label="ユーザー名" value={settings.replyUserName} onChange={(v) => update("replyUserName", v)} />
                       <Field label="アイコン文字" value={settings.replyAvatarLabel} onChange={(v) => update("replyAvatarLabel", v.slice(0, 2))} />
-                      <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("replyAvatarImage", url))} className="text-xs" /></label>
+                      <Field label="返信時間" value={settings.replyTime} onChange={(v) => update("replyTime", v)} />
                     </div>
+                    <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("replyAvatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                     <TextArea label="送信する返信" value={settings.replyInput} onChange={(v) => update("replyInput", v)} rows={3} />
                     <Button onClick={addReply}><Send className="h-4 w-4" />返信を送信</Button>
                   </SectionCard>
 
                   <SectionCard icon={MessageCircle} title="返信一覧">
-                    {settings.replies.length === 0 ? <p className="text-sm text-black/50">返信はまだありません。</p> : settings.replies.map((reply) => (
-                      <div key={reply.id} className="rounded-2xl border border-black/10 p-3">
-                        <div className="mb-1 flex items-center gap-2 text-sm font-bold"><Avatar image={reply.avatarImage} label={reply.avatarLabel} size="h-7 w-7" />{reply.displayName}<span className="text-xs font-medium text-black/45">@{reply.username}</span></div>
-                        <p className="text-sm text-black/75">{reply.text}</p>
-                        <div className="mt-2 flex gap-2"><Button variant="outline" onClick={() => toggleReplyLike(reply.id)}>いいね切替</Button><Button variant="danger" onClick={() => deleteReply(reply.id)}>削除</Button></div>
+                    {settings.replies.length === 0 ? <p className="text-sm text-black/50">返信はまだありません。</p> : settings.replies.map((reply, index) => (
+                      <div key={reply.id} className="grid gap-3 rounded-3xl border border-black/10 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-sm font-black"><Avatar image={reply.avatarImage} label={reply.avatarLabel} size="h-7 w-7" />返信 {index + 1}</div>
+                          <Button variant="danger" onClick={() => deleteReply(reply.id)}><Trash2 className="h-4 w-4" />削除</Button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <Field label="表示名" value={reply.displayName} onChange={(v) => updateReply(reply.id, "displayName", v)} />
+                          <Field label="ユーザー名" value={reply.username} onChange={(v) => updateReply(reply.id, "username", v)} />
+                          <Field label="アイコン文字" value={reply.avatarLabel} onChange={(v) => updateReply(reply.id, "avatarLabel", v.slice(0, 2))} />
+                          <Field label="返信時間" value={reply.time} onChange={(v) => updateReply(reply.id, "time", v)} />
+                          <Field label="いいね数" type="number" value={String(reply.likeCount)} onChange={(v) => updateReply(reply.id, "likeCount", Number(v) || 0)} />
+                        </div>
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateReply(reply.id, "avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
+                        <TextArea label="返信本文" value={reply.text} onChange={(v) => updateReply(reply.id, "text", v)} rows={3} />
+                        <div className="flex gap-2"><Button variant="outline" onClick={() => toggleReplyLike(reply.id)}>いいねON/OFF</Button></div>
                       </div>
                     ))}
                   </SectionCard>
@@ -853,20 +920,20 @@ export default function XMockCreator() {
                           <div className="text-sm font-black">タイムライン投稿 {index + 1}</div>
                           <Button variant="danger" onClick={() => deleteTimelinePost(post.id)}><Trash2 className="h-4 w-4" />削除</Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <Field label="表示名" value={post.displayName} onChange={(v) => updateTimelinePost(post.id, "displayName", v)} />
                           <Field label="ユーザー名" value={post.username} onChange={(v) => updateTimelinePost(post.id, "username", v)} />
                           <Field label="アイコン文字" value={post.avatarLabel} onChange={(v) => updateTimelinePost(post.id, "avatarLabel", v.slice(0, 2))} />
                           <Field label="投稿時間" value={post.time} onChange={(v) => updateTimelinePost(post.id, "time", v)} />
                         </div>
-                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateTimelinePost(post.id, "avatarImage", url))} className="text-xs" /></label>
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateTimelinePost(post.id, "avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                         <TextArea label="本文" value={post.text} onChange={(v) => updateTimelinePost(post.id, "text", v)} rows={4} />
-                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateTimelinePost(post.id, "images", [...post.images, ...urls]); updateTimelinePost(post.id, "currentImageIndex", 0); })} className="text-xs" /></label>
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateTimelinePost(post.id, "images", [...post.images, ...urls]); updateTimelinePost(post.id, "currentImageIndex", 0); })} className="w-full min-w-0 text-xs" /></label>
                         <div className="flex flex-wrap gap-2">
                           <Button variant="outline" onClick={() => updateTimelinePost(post.id, "images", [])}>メディアを全削除</Button>
                           <Button variant={post.verified ? "primary" : "outline"} onClick={() => updateTimelinePost(post.id, "verified", !post.verified)}>認証バッジ</Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <Field label="返信数" type="number" value={String(post.replyCount)} onChange={(v) => updateTimelinePost(post.id, "replyCount", Number(v) || 0)} />
                           <Field label="リポスト数" type="number" value={String(post.repostCount)} onChange={(v) => updateTimelinePost(post.id, "repostCount", Number(v) || 0)} />
                           <Field label="いいね数" type="number" value={String(post.likeCount)} onChange={(v) => updateTimelinePost(post.id, "likeCount", Number(v) || 0)} />
@@ -881,15 +948,15 @@ export default function XMockCreator() {
               {activeTab === "profile" && (
                 <>
                   <SectionCard icon={UserCircle2} title="プロフィール画面">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="表示名" value={settings.displayName} onChange={(v) => update("displayName", v)} />
                       <Field label="ユーザー名" value={settings.username} onChange={(v) => update("username", v)} />
                       <Field label="アイコン文字" value={settings.avatarLabel} onChange={(v) => update("avatarLabel", v.slice(0, 2))} />
-                      <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("avatarImage", url))} className="text-xs" /></label>
+                      <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                     </div>
-                    <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>カバー画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("profileCoverImage", url))} className="text-xs" /></label>
+                    <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>カバー画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("profileCoverImage", url))} className="w-full min-w-0 text-xs" /></label>
                     <TextArea label="プロフィール文" value={settings.profileBio} onChange={(v) => update("profileBio", v)} rows={4} />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Field label="場所" value={settings.profileLocation} onChange={(v) => update("profileLocation", v)} />
                       <Field label="開始日" value={settings.profileJoined} onChange={(v) => update("profileJoined", v)} />
                       <Field label="フォロー数" value={settings.profileFollowingCount} onChange={(v) => update("profileFollowingCount", v)} />
@@ -898,12 +965,43 @@ export default function XMockCreator() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant={settings.verified ? "primary" : "outline"} onClick={() => update("verified", !settings.verified)}>認証バッジ</Button>
+                      <Button variant={settings.profileFollowed ? "primary" : "outline"} onClick={() => update("profileFollowed", !settings.profileFollowed)}>フォロー状態</Button>
                       <Button variant="outline" onClick={() => update("profileCoverImage", null)}>カバー削除</Button>
                     </div>
                   </SectionCard>
-                  <SectionCard icon={MessageCircle} title="プロフィールに表示する投稿">
-                    <p className="text-sm text-black/50">プロフィール画面には、メイン投稿とタイムライン投稿が表示されます。投稿内容は「作成」「TL」タブから編集できます。</p>
-                    <Button onClick={() => update("screenType", "profile")}>プロフィール画面を表示</Button>
+                  <SectionCard icon={MessageCircle} title="プロフィール専用投稿">
+                    <div className="flex flex-wrap gap-2">
+                      <Button onClick={addProfilePost}>プロフィール投稿を追加</Button>
+                      <Button variant="outline" onClick={() => update("screenType", "profile")}>プロフィール画面を表示</Button>
+                    </div>
+                    <p className="text-sm text-black/50">ここで作った投稿だけがプロフィール画面の「ポスト」欄に表示されます。タイムライン投稿とは別管理です。</p>
+                    {settings.profilePosts.length === 0 ? <p className="text-sm text-black/50">プロフィール投稿はありません。</p> : settings.profilePosts.map((post, index) => (
+                      <div key={post.id} className="grid gap-3 rounded-3xl border border-black/10 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-black">プロフィール投稿 {index + 1}</div>
+                          <Button variant="danger" onClick={() => deleteProfilePost(post.id)}><Trash2 className="h-4 w-4" />削除</Button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <Field label="表示名" value={post.displayName} onChange={(v) => updateProfilePost(post.id, "displayName", v)} />
+                          <Field label="ユーザー名" value={post.username} onChange={(v) => updateProfilePost(post.id, "username", v)} />
+                          <Field label="アイコン文字" value={post.avatarLabel} onChange={(v) => updateProfilePost(post.id, "avatarLabel", v.slice(0, 2))} />
+                          <Field label="投稿時間" value={post.time} onChange={(v) => updateProfilePost(post.id, "time", v)} />
+                        </div>
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateProfilePost(post.id, "avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
+                        <TextArea label="本文" value={post.text} onChange={(v) => updateProfilePost(post.id, "text", v)} rows={4} />
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>投稿メディア（画像 / 動画・複数可）</span><input type="file" accept="image/*,video/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateProfilePost(post.id, "images", [...post.images, ...urls]); updateProfilePost(post.id, "currentImageIndex", 0); })} className="w-full min-w-0 text-xs" /></label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" onClick={() => updateProfilePost(post.id, "images", [])}>メディアを全削除</Button>
+                          <Button variant={post.verified ? "primary" : "outline"} onClick={() => updateProfilePost(post.id, "verified", !post.verified)}>認証バッジ</Button>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <Field label="返信数" type="number" value={String(post.replyCount)} onChange={(v) => updateProfilePost(post.id, "replyCount", Number(v) || 0)} />
+                          <Field label="リポスト数" type="number" value={String(post.repostCount)} onChange={(v) => updateProfilePost(post.id, "repostCount", Number(v) || 0)} />
+                          <Field label="いいね数" type="number" value={String(post.likeCount)} onChange={(v) => updateProfilePost(post.id, "likeCount", Number(v) || 0)} />
+                          <Field label="表示数" value={post.viewCount} onChange={(v) => updateProfilePost(post.id, "viewCount", v)} />
+                        </div>
+                      </div>
+                    ))}
                   </SectionCard>
                 </>
               )}
@@ -918,10 +1016,10 @@ export default function XMockCreator() {
                           <div className="text-sm font-black">通知 {index + 1}</div>
                           <Button variant="danger" onClick={() => deleteNotification(item.id)}><Trash2 className="h-4 w-4" />削除</Button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <label className="grid gap-1.5 text-sm font-semibold text-black/70">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70">
                             <span>通知タイプ</span>
-                            <select value={item.kind} onChange={(e) => updateNotification(item.id, "kind", e.target.value as NotificationItem["kind"])} className="rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10">
+                            <select value={item.kind} onChange={(e) => updateNotification(item.id, "kind", e.target.value as NotificationItem["kind"])} className="w-full min-w-0 rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10">
                               <option value="reply">返信</option>
                               <option value="like">いいね</option>
                               <option value="repost">リポスト</option>
@@ -934,7 +1032,7 @@ export default function XMockCreator() {
                           <Field label="ユーザー名" value={item.username} onChange={(v) => updateNotification(item.id, "username", v)} />
                           <Field label="アイコン文字" value={item.avatarLabel} onChange={(v) => updateNotification(item.id, "avatarLabel", v.slice(0, 2))} />
                         </div>
-                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateNotification(item.id, "avatarImage", url))} className="text-xs" /></label>
+                        <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateNotification(item.id, "avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                         <Field label="通知タイトル" value={item.title} onChange={(v) => updateNotification(item.id, "title", v)} />
                         <TextArea label="通知本文" value={item.text} onChange={(v) => updateNotification(item.id, "text", v)} rows={3} />
                       </div>
@@ -952,7 +1050,7 @@ export default function XMockCreator() {
                       <div key={preset.id} className="rounded-2xl border border-black/10 p-3">
                         <div className="font-bold">{preset.name}</div>
                         <div className="mb-2 text-xs text-black/45">{preset.savedAt}</div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           <Button variant="outline" onClick={() => setSettings(normalizeXSettings(preset.settings))}>読み込み</Button>
                           <Button variant="outline" onClick={() => overwritePreset(preset.id)}>上書き</Button>
                           <Button variant="outline" onClick={() => duplicatePreset(preset)}>複製</Button>
@@ -969,17 +1067,17 @@ export default function XMockCreator() {
                   <SectionCard icon={Settings2} title="撮影表示">
                     <Field label="ステータスバー時刻" value={settings.deviceTime} onChange={(v) => update("deviceTime", v)} />
                     <Field label="背景色" value={settings.bgColor} onChange={(v) => update("bgColor", v)} />
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">通常表示時のみ非表示可。フルスクリーン時は復帰用に表示</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーン</div><div className="text-xs text-black/50">スマホ枠と設定画面を外す</div></div><Switch checked={settings.fullScreenMode} onChange={(v) => update("fullScreenMode", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">通常表示時のみ非表示可。フルスクリーン時は復帰用に表示</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーン</div><div className="text-xs text-black/50">スマホ枠と設定画面を外す</div></div><Switch checked={settings.fullScreenMode} onChange={(v) => update("fullScreenMode", v)} /></div>
                   </SectionCard>
                 </>
               )}
 
               {activeTab === "modes" && (
                 <SectionCard icon={Settings2} title="モード切り替え">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Button variant="outline" onClick={() => router.push("/")}>チャットモードへ</Button>
                     <Button variant="outline" onClick={() => router.push("/notification")}>通知画面モードへ</Button>
                     <Button variant="outline" onClick={() => router.push("/instagram")}>Instagramモードへ</Button>
