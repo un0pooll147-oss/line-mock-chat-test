@@ -653,7 +653,14 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
     setMessageDraft("");
   };
 
-  const latestMessage = settings.storyMessages?.[settings.storyMessages.length - 1];
+  const storyMessages = settings.storyMessages || [];
+
+  const deleteStoryMessage = (targetIndex: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      storyMessages: (prev.storyMessages || []).filter((_, index) => index !== targetIndex),
+    }));
+  };
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-black text-white" style={storyStyle}>
@@ -710,11 +717,23 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
         )}
       </div>
 
-      {latestMessage && (
-        <div className="relative z-20 mx-4 mb-3 flex justify-end">
-          <div className="max-w-[78%] rounded-2xl bg-white/90 px-3 py-2 text-xs font-medium text-black shadow-lg">
-            送信済み：{latestMessage}
-          </div>
+{storyMessages.length > 0 && (
+        <div className="relative z-20 mx-4 mb-3 flex max-h-28 flex-col items-end gap-2 overflow-y-auto">
+          {storyMessages.map((message, index) => (
+            <div key={`${message}-${index}`} className="flex max-w-[86%] items-center gap-2">
+              <div className="min-w-0 rounded-2xl bg-white/90 px-3 py-2 text-xs font-medium text-black shadow-lg">
+                送信済み：{message}
+              </div>
+              <button
+                type="button"
+                onClick={() => deleteStoryMessage(index)}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur active:scale-95"
+                aria-label="送信済みメッセージを削除"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
       <div className="relative z-20 flex items-center gap-3 px-4 pb-5">
@@ -1121,7 +1140,7 @@ export default function InstagramMockCreator() {
                     <Button variant="outline" onClick={() => router.push("/")}>チャットモードへ</Button>
                     <Button variant="outline" onClick={() => router.push("/notification")}>通知画面モードへ</Button>
                     <Button>Instagramモード</Button>
-                    <Button variant="outline" disabled>Xモード（準備中）</Button>
+                    <Button variant="outline" onClick={() => router.push("/x")}>Xモードへ</Button>
                     <Button variant="outline" disabled>TikTokモード（準備中）</Button>
                   </div>
                 </SectionCard>
