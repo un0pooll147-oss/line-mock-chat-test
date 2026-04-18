@@ -757,7 +757,6 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
           onKeyDown={(e) => { if (e.key === "Enter") submitStoryMessage(); }}
           placeholder={settings.storyReplyPlaceholder || "メッセージを送信"}
           className="min-w-0 flex-1 rounded-full border border-white/80 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/75 outline-none backdrop-blur"
-        />
         <button type="button" onClick={toggleStoryLike} className="rounded-full active:scale-95" aria-label="ストーリーにいいね">
           <Heart className={cn("h-7 w-7", settings.storyLiked && "fill-red-500 text-red-500")} />
         </button>
@@ -975,12 +974,13 @@ export default function InstagramMockCreator() {
       {settingsOpen && (
         <div className="fixed inset-0 z-50 bg-black/35">
           <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl">
-            <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
-              <button type="button" onClick={() => setSettingsOpen(false)} className="flex h-11 w-11 items-center justify-center rounded-full bg-black/[0.06]"><X className="h-5 w-5" /></button>
-              <div className="text-sm font-semibold text-black/75">Instagram風 画面設定</div>
+            <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
+              <button type="button" onClick={() => setSettingsOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]" aria-label="閉じる"><X className="h-5 w-5" /></button>
+              <div className="text-lg font-semibold">設定</div>
+              <div className="h-10 w-10" aria-hidden="true" />
             </div>
 
-            <div className="mb-4 grid shrink-0 grid-cols-5 rounded-3xl bg-black/[0.06] p-1">
+            <div className="grid shrink-0 grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "comments"} onClick={() => setActiveTab("comments")}>コメント</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
@@ -988,7 +988,7 @@ export default function InstagramMockCreator() {
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-[max(48px,env(safe-area-inset-bottom))]">
+            <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
               {activeTab === "create" && (
                 <div className="space-y-4">
                   <SectionCard icon={ImageIcon} title="作成する画面">

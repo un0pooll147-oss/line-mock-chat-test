@@ -737,26 +737,26 @@ export default function XMockCreator() {
         <section className={cls("flex items-start justify-center", settings.fullScreenMode ? "" : "lg:sticky lg:top-4")}>{phone}</section>
 
         {settingsOpen && (
-          <aside className={cls(settings.fullScreenMode ? "fixed bottom-4 right-4 top-4 z-50 w-[min(430px,calc(100vw-32px))] overflow-y-auto rounded-[32px] bg-white/95 p-4 shadow-2xl backdrop-blur" : "rounded-[32px] bg-white/85 p-4 shadow-xl backdrop-blur lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto")}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h1 className="text-xl font-black">Xモード</h1>
-                <p className="text-sm text-black/55">架空SNSの投稿・返信・通知画面を作成</p>
+          <div className="fixed inset-0 z-50 bg-black/35">
+            <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black">
+              <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
+                <button type="button" onClick={() => setSettingsOpen(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.04] text-black/70 transition hover:bg-black/[0.07]" aria-label="閉じる"><XIcon className="h-5 w-5" /></button>
+                <div className="text-lg font-semibold">設定</div>
+                <div className="h-10 w-10" aria-hidden="true" />
               </div>
-              <button type="button" onClick={() => setSettingsOpen(false)} className="grid h-10 w-10 place-items-center rounded-full bg-black/5"><XIcon className="h-5 w-5" /></button>
-            </div>
 
-            <div className="mb-4 flex flex-wrap gap-2">
+              <div className="grid shrink-0 grid-cols-7 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "replies"} onClick={() => setActiveTab("replies")}>返信</TabButton>
-              <TabButton active={activeTab === "timeline"} onClick={() => setActiveTab("timeline")}>タイムライン</TabButton>
+                <TabButton active={activeTab === "timeline"} onClick={() => setActiveTab("timeline")}>TL</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
-            <div className="grid gap-4">
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
+                <div className="grid gap-4">
               {activeTab === "create" && (
                 <>
                   <SectionCard icon={Palette} title="表示タイプ / テーマ">
@@ -951,8 +951,10 @@ export default function XMockCreator() {
                   </div>
                 </SectionCard>
               )}
+                </div>
+              </div>
             </div>
-          </aside>
+          </div>
         )}
       </div>
     </main>

@@ -1632,9 +1632,9 @@ export default function NotificationCreator() {
       </div>
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-40 flex min-h-[100dvh] flex-col overflow-hidden bg-[#f5f5f5] text-black">
-          <div className="shrink-0 border-b border-black/10 bg-[#f5f5f5]/95 px-4 pb-3 pt-[max(14px,env(safe-area-inset-top))] backdrop-blur">
-            <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-black/35">
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex h-[86vh] w-full max-w-md flex-col rounded-t-[28px] bg-[#fafafa] px-4 pt-4 shadow-2xl text-black">
+            <div className="mb-4 shrink-0 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => setSettingsOpen(false)}
@@ -1643,19 +1643,18 @@ export default function NotificationCreator() {
               >
                 <X className="h-5 w-5" />
               </button>
-              <div className="text-sm font-semibold text-black/75">通知画面設定</div>
+              <div className="text-lg font-semibold">設定</div>
               <div className="h-10 w-10" aria-hidden="true" />
             </div>
-            <div className="grid grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid shrink-0 grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
-          </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(28px,calc(env(safe-area-inset-bottom)+28px))] overscroll-contain">
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1 overscroll-contain">
             {activeTab === "appearance" && (
               <div className="space-y-4">
                 <SectionCard icon={Palette} title="端末・見た目">
@@ -2008,6 +2007,7 @@ export default function NotificationCreator() {
                 </SectionCard>
               </div>
             )}
+          </div>
           </div>
         </div>
       )}
