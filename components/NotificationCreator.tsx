@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 type OSType = "iphone" | "android";
-type SettingsTab = "appearance" | "notifications" | "screen";
+type SettingsTab = "appearance" | "notifications" | "screen" | "modes";
 type NotificationDirection = "top" | "bottom";
 type SoundPreset = "classic" | "digital" | "soft" | "upload";
 type OutgoingToneType = "iphone" | "line" | "custom";
@@ -1508,10 +1508,11 @@ export default function NotificationCreator() {
                 <span>チャット画面に戻る</span>
               </button>
             </div>
-            <div className="grid grid-cols-3 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
+              <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
           </div>
 
@@ -1702,6 +1703,24 @@ export default function NotificationCreator() {
                 </SectionCard>
               </div>
             )}
+            {activeTab === "modes" && (
+              <div className="space-y-4">
+                <SectionCard icon={Settings2} title="モード切り替え">
+                  <div className="text-sm text-black/55">
+                    各画面作成モードへ切り替えます。通知内容を保存してから切り替えると安心です。
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button onClick={() => router.push("/")} variant="outline" className="w-full justify-center">チャットモードへ</Button>
+                    <Button className="w-full justify-center">通知画面モード</Button>
+                    <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
+                    <Button disabled variant="outline" className="w-full justify-center">Xモード（準備中）</Button>
+                    <Button disabled variant="outline" className="w-full justify-center">TikTokモード（準備中）</Button>
+                  </div>
+                </SectionCard>
+              </div>
+            )}
+
+
 
             {activeTab === "screen" && (
               <div className="space-y-4">

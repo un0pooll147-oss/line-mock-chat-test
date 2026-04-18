@@ -206,7 +206,7 @@ const defaultSettings = {
 const initialTimedMessages = [{ id: 1, sender: defaultSettings.incomingSender, text: "", delay: 3, countdown: 0, pending: false }];
 
 function normalizeStoredMessages(messages: any[] | undefined) {
-  if (!Array.isArray(messages) || messages.length === 0) return initialMessages;
+  if (!Array.isArray(messages)) return initialMessages;
   return messages.map((msg, index) => ({
     id: typeof msg?.id === "number" ? msg.id : Date.now() + index,
     side: msg?.side === "right" ? "right" : "left",
@@ -221,7 +221,7 @@ function normalizeStoredMessages(messages: any[] | undefined) {
 }
 
 function normalizeStoredTimedMessages(items: any[] | undefined, fallbackSender = defaultSettings.incomingSender) {
-  if (!Array.isArray(items) || items.length === 0) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
+  if (!Array.isArray(items)) return [{ ...initialTimedMessages[0], sender: fallbackSender }];
   return items.map((item, index) => ({
     id: typeof item?.id === "number" ? item.id : Date.now() + index,
     sender: String(item?.sender ?? fallbackSender),
@@ -737,6 +737,10 @@ export default function LineMockChatCreator() {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    setSavedChats(readStoredSavedChatPresets());
   }, []);
 
   useEffect(() => {
@@ -1518,12 +1522,13 @@ export default function LineMockChatCreator() {
               </button>
             </div>
 
-            <div className="grid grid-cols-5 rounded-2xl bg-black/5 p-1 text-center">
+            <div className="grid grid-cols-6 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "appearance"} onClick={() => setActiveTab("appearance")}>見た目</TabButton>
               <TabButton active={activeTab === "chat"} onClick={() => setActiveTab("chat")}>会話</TabButton>
               <TabButton active={activeTab === "messages"} onClick={() => setActiveTab("messages")}>履歴</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
+              <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-[max(18px,calc(env(safe-area-inset-bottom)+18px))] pr-1">
@@ -1783,6 +1788,24 @@ export default function LineMockChatCreator() {
                   </SectionCard>
                 </div>
               )}
+              {activeTab === "modes" && (
+                <div className="space-y-4">
+                  <SectionCard icon={Settings2} title="モード切り替え">
+                    <div className="text-sm text-black/55">
+                      各画面作成モードへ切り替えます。現在のチャット内容は保存してから切り替えると安心です。
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button className="w-full justify-center">チャットモード</Button>
+                      <Button onClick={() => router.push("/notification")} variant="outline" className="w-full justify-center">通知画面モードへ</Button>
+                      <Button onClick={() => router.push("/instagram")} variant="outline" className="w-full justify-center">Instagramモードへ</Button>
+                      <Button disabled variant="outline" className="w-full justify-center">Xモード（準備中）</Button>
+                      <Button disabled variant="outline" className="w-full justify-center">TikTokモード（準備中）</Button>
+                    </div>
+                  </SectionCard>
+                </div>
+              )}
+
+
 
               {activeTab === "screen" && (
                 <div className="space-y-4">
