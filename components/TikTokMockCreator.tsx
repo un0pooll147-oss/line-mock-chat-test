@@ -186,6 +186,7 @@ const readStoredSettings = (): TikTokSettings => {
     const merged = { ...defaultSettings, ...parsed } as TikTokSettings;
     if (merged.themeKey !== "dark") merged.themeKey = "basic";
     if (!Array.isArray(merged.mediaItems)) merged.mediaItems = [];
+    merged.mediaItems = merged.mediaItems.slice(0, 4);
     if (!Array.isArray(merged.comments)) merged.comments = defaultSettings.comments;
     if (!Number.isFinite(Number(merged.currentMediaIndex))) merged.currentMediaIndex = 0;
     merged.currentMediaIndex = Math.max(0, Math.min(merged.currentMediaIndex, Math.max(merged.mediaItems.length - 1, 0)));
@@ -371,11 +372,21 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
   isFullScreen: boolean;
 }) {
   const theme = themes[settings.themeKey] || themes.basic;
-  const media = settings.mediaItems || [];
+  const media = (settings.mediaItems || []).slice(0, 4);
   const currentUrl = media[settings.currentMediaIndex] || null;
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const goMedia = (delta: number) => {
     if (media.length <= 1) return;
     setSettings((prev) => ({ ...prev, currentMediaIndex: (prev.currentMediaIndex + delta + media.length) % media.length }));
+  };
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX === null || media.length <= 1) return;
+    const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
+    const distance = touchEndX - touchStartX;
+    if (Math.abs(distance) > 45) {
+      goMedia(distance > 0 ? -1 : 1);
+    }
+    setTouchStartX(null);
   };
 
   const toggleLike = () => {
@@ -387,7 +398,11 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
   };
 
   return (
-    <div className={cn("relative h-full min-h-0 w-full overflow-hidden", theme.root, theme.text)}>
+    <div
+      className={cn("relative h-full min-h-0 w-full overflow-hidden", theme.root, theme.text)}
+      onTouchStart={(event) => setTouchStartX(event.touches[0]?.clientX ?? null)}
+      onTouchEnd={handleTouchEnd}
+    >
       <MediaView url={currentUrl} />
       <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-b", theme.overlay)} />
 
@@ -421,6 +436,9 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
         <>
           <button type="button" onClick={() => goMedia(-1)} className="absolute left-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="前のメディア" />
           <button type="button" onClick={() => goMedia(1)} className="absolute right-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="次のメディア" />
+          <div className={cn("absolute right-4 z-20 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur", settings.showStatusBar && !isFullScreen ? "top-[88px]" : "top-[52px]")}>
+            {settings.currentMediaIndex + 1}/{media.length}
+          </div>
           <div className="absolute left-1/2 top-20 z-20 flex -translate-x-1/2 gap-1">
             {media.map((_, index) => <span key={index} className={cn("h-1.5 w-1.5 rounded-full", index === settings.currentMediaIndex ? "bg-white" : "bg-white/35")} />)}
           </div>
@@ -435,7 +453,7 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
           </button>
         </div>
         <ActionButton icon={<Heart className={cn("h-7 w-7", settings.liked && "fill-current")} />} count={settings.likeCount} active={settings.liked} onClick={toggleLike} label="いいね" />
-        <ActionButton icon={<MessageCircle className="h-7 w-7" />} count={String(Math.max(Number.parseInt(settings.commentCount, 10) || 0, settings.comments.length))} onClick={() => setCommentsOpen(true)} label="コメント" />
+        <ActionButton icon={<MessageCircle className="h-7 w-7" />} count={settings.commentCount || "0"} onClick={() => setCommentsOpen(true)} label="コメント" />
         <ActionButton icon={<Bookmark className={cn("h-7 w-7", settings.saved && "fill-current")} />} count={settings.saveCount} active={settings.saved} onClick={toggleSave} label="保存" />
         <ActionButton icon={<Share2 className="h-7 w-7" />} count={settings.shareCount} label="シェア" />
       </div>
@@ -491,7 +509,7 @@ function CommentsSheet({ settings, setSettings, onClose }: { settings: TikTokSet
       <div className="max-h-[72%] w-full overflow-hidden rounded-t-[28px] bg-white text-black shadow-2xl">
         <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
           <div className="w-9" />
-          <div className="text-sm font-bold">コメント {settings.comments.length}件</div>
+          <div className="text-sm font-bold">コメント {settings.commentCount || "0"}件</div>
           <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-black/5"><X className="h-5 w-5" /></button>
         </div>
         <div className="max-h-[42vh] space-y-4 overflow-y-auto px-4 py-4">
@@ -567,7 +585,48 @@ export default function TikTokMockCreator() {
     }
   }, [savedPresets, isHydrated]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const handleFullscreenChange = () => {
+      const doc = document as Document & { webkitFullscreenElement?: Element | null };
+      const isBrowserFullscreen = Boolean(document.fullscreenElement || doc.webkitFullscreenElement);
+      if (!isBrowserFullscreen) {
+        setSettings((prev) => prev.fullScreenMode ? { ...prev, fullScreenMode: false } : prev);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange as EventListener);
+    };
+  }, []);
+
   const update = <K extends keyof TikTokSettings>(key: K, value: TikTokSettings[K]) => setSettings((prev) => ({ ...prev, [key]: value }));
+
+  const requestBrowserFullscreen = async (enabled: boolean) => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+    const doc = document as Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> | void };
+    try {
+      if (enabled) {
+        if (!document.fullscreenElement && !doc.webkitFullscreenElement) {
+          const request = root.requestFullscreen?.bind(root) ?? root.webkitRequestFullscreen?.bind(root);
+          await request?.();
+        }
+      } else if (document.fullscreenElement || doc.webkitFullscreenElement) {
+        const exit = document.exitFullscreen?.bind(document) ?? doc.webkitExitFullscreen?.bind(doc);
+        await exit?.();
+      }
+    } catch {
+      // ブラウザ側で許可されない場合も、アプリ内の撮影用表示は切り替える。
+    }
+  };
+
+  const setFullScreenMode = (value: boolean) => {
+    update("fullScreenMode", value);
+    void requestBrowserFullscreen(value);
+  };
 
   const readFile = (file: File, callback: (url: string) => void) => {
     const reader = new FileReader();
@@ -592,8 +651,17 @@ export default function TikTokMockCreator() {
   const onMediaFiles = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
-    Promise.all(files.map((file) => new Promise<string>((resolve) => readFile(file, resolve)))).then((urls) => {
-      setSettings((prev) => ({ ...prev, mediaItems: [...prev.mediaItems, ...urls], currentMediaIndex: prev.mediaItems.length ? prev.currentMediaIndex : 0 }));
+    setSettings((prev) => {
+      const remaining = Math.max(0, 4 - prev.mediaItems.length);
+      if (remaining === 0) return prev;
+      Promise.all(files.slice(0, remaining).map((file) => new Promise<string>((resolve) => readFile(file, resolve)))).then((urls) => {
+        setSettings((current) => ({
+          ...current,
+          mediaItems: [...current.mediaItems, ...urls].slice(0, 4),
+          currentMediaIndex: current.mediaItems.length ? Math.min(current.currentMediaIndex, 3) : 0,
+        }));
+      });
+      return prev;
     });
     event.target.value = "";
   };
@@ -682,7 +750,7 @@ export default function TikTokMockCreator() {
 
                     <SectionCard icon={ImageIcon} title="投稿メディア">
                       <div className="flex flex-wrap gap-2">
-                        <MultiFileButton accept="image/*,video/*" onFiles={onMediaFiles}>画像 / 動画を追加</MultiFileButton>
+                        <MultiFileButton accept="image/*,video/*" onFiles={onMediaFiles}>画像 / 動画を追加（最大4）</MultiFileButton>
                         <Button variant="outline" onClick={() => update("mediaItems", [])}>全削除</Button>
                       </div>
                       {settings.mediaItems.length > 0 && (
@@ -770,7 +838,7 @@ export default function TikTokMockCreator() {
 
                 {activeTab === "screen" && (
                   <SectionCard icon={Settings2} title="画面表示">
-                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={(value) => update("fullScreenMode", value)} /></div>
+                    <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(value) => update("showSettingsButton", value)} /></div>
