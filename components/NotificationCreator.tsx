@@ -339,29 +339,16 @@ function StatusCellDots({ className = "" }: { className?: string }) {
   );
 }
 
-function PhoneStatusBar({ osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
-  if (osType === "iphone") {
-    return (
-      <div className={cn("flex items-center justify-between px-6 text-[13px] font-semibold tracking-[-0.01em] [text-shadow:0_1px_2px_rgba(0,0,0,0.22)]", className)}>
-        <div className="min-w-[52px] pl-1 tabular-nums">{time}</div>
-        <div className="flex items-center gap-1.5">
-          <StatusCellDots className="h-[11px] w-[18px]" />
-          <StatusWifi className="h-[11px] w-[17px]" />
-          <StatusBattery className="h-[12px] w-[25px]" level={level} />
-        </div>
-      </div>
-    );
-  }
-
+function PhoneStatusBar({ osType: _osType, time, level = 100, className = "" }: { osType: OSType; time: string; level?: number; className?: string }) {
   return (
-    <div className={cn("flex items-center justify-between px-4 text-[13px] font-semibold tracking-[-0.015em] [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]", className)}>
-      <div className="flex items-center gap-2.5">
+    <div className={cn("px-5 pt-0.5", className)}>
+      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
         <span className="tabular-nums">{time}</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <StatusSignal className="h-[12px] w-[18px] opacity-95" />
-        <StatusWifi className="h-[12px] w-[18px] opacity-95" />
-        <StatusBattery className="h-[12px] w-[26px] opacity-95" level={level} />
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[10px] w-[17px]" />
+          <StatusWifi className="h-[10px] w-[16px]" />
+          <StatusBattery className="h-[11px] w-[24px]" level={level} />
+        </div>
       </div>
     </div>
   );

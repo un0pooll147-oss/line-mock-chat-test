@@ -45,8 +45,10 @@ type InstagramSettings = {
   avatarLabel: string;
   avatarImage: string | null;
   postImage: string | null;
+  postImages: string[];
   caption: string;
   likeCount: string;
+  postLiked: boolean;
   commentCount: string;
   repostCount: string;
   comments: InstagramComment[];
@@ -54,6 +56,8 @@ type InstagramSettings = {
   storyImage: string | null;
   storyText: string;
   storyReplyPlaceholder: string;
+  storyLiked: boolean;
+  storyMessages: string[];
   deviceTime: string;
   fullScreenMode: boolean;
   deviceFrameMode: boolean;
@@ -94,8 +98,10 @@ const defaultSettings: InstagramSettings = {
   avatarLabel: "美",
   avatarImage: null,
   postImage: null,
+  postImages: [],
   caption: "今日の撮影、少しだけ特別な時間だった。",
   likeCount: "128",
+  postLiked: false,
   commentCount: "12",
   repostCount: "3",
   comments: [
@@ -124,6 +130,8 @@ const defaultSettings: InstagramSettings = {
   storyImage: null,
   storyText: "今日はありがとう。",
   storyReplyPlaceholder: "メッセージを送信",
+  storyLiked: false,
+  storyMessages: [],
   deviceTime: "22:18",
   fullScreenMode: false,
   deviceFrameMode: false,
@@ -139,7 +147,14 @@ const readStoredSettings = (): InstagramSettings => {
     const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("instagram-mock-settings-v1");
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw);
-    return { ...defaultSettings, ...parsed };
+    const merged = { ...defaultSettings, ...parsed } as InstagramSettings;
+    if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) {
+      merged.postImages = [merged.postImage];
+    }
+    if (!Array.isArray(merged.storyMessages)) {
+      merged.storyMessages = [];
+    }
+    return merged;
   } catch {
     return defaultSettings;
   }
@@ -191,6 +206,16 @@ function FileButton({ children, accept, onFile }: { children: React.ReactNode; a
   );
 }
 
+function MultiFileButton({ children, accept, onFiles }: { children: React.ReactNode; accept: string; onFiles: (event: ChangeEvent<HTMLInputElement>) => void }) {
+  return (
+    <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm font-medium text-black transition active:scale-[0.98]">
+      <Upload className="mr-2 h-4 w-4" />
+      {children}
+      <input type="file" accept={accept} multiple onChange={onFiles} className="hidden" />
+    </label>
+  );
+}
+
 function SectionCard({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm">
@@ -224,17 +249,64 @@ function Avatar({ label, image, size = "h-9 w-9", themeKey = "instagram" }: { la
   );
 }
 
+function StatusCellDots({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 18 14" className={className} fill="currentColor" aria-hidden="true">
+      <circle cx="3" cy="10.7" r="1.2" opacity="0.55" />
+      <circle cx="7" cy="8.8" r="1.45" opacity="0.72" />
+      <circle cx="11" cy="6.7" r="1.7" opacity="0.85" />
+      <circle cx="15" cy="4.4" r="1.95" />
+    </svg>
+  );
+}
+
+function StatusWifi({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 14" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.3 5.2A12.2 12.2 0 0 1 10 2.5a12.2 12.2 0 0 1 7.7 2.7" strokeWidth="1.7" opacity="0.6" />
+      <path d="M4.8 7.8A8.2 8.2 0 0 1 10 5.9a8.2 8.2 0 0 1 5.2 1.9" strokeWidth="1.7" opacity="0.82" />
+      <path d="M7.4 10.2A4.4 4.4 0 0 1 10 9.3a4.4 4.4 0 0 1 2.6.9" strokeWidth="1.7" />
+      <circle cx="10" cy="12" r="1.05" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StatusBattery({ className = "", level = 100 }: { className?: string; level?: number }) {
+  const safeLevel = Math.max(0, Math.min(100, level));
+  const fillWidth = 16 * (safeLevel / 100);
+  return (
+    <svg viewBox="0 0 30 14" className={className} fill="none" aria-hidden="true">
+      <rect x="1" y="1.5" width="24" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <rect x="26.2" y="4.2" width="2.3" height="5.6" rx="1.1" fill="currentColor" />
+      <rect x="3.2" y="3.6" width={fillWidth} height="6.8" rx="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 function StatusBar({ time, className = "text-black" }: { time: string; className?: string }) {
   return (
-    <div className={cn("flex h-9 items-center justify-between px-5 text-[13px] font-semibold", className)}>
-      <span>{time}</span>
-      <div className="flex items-center gap-1.5">
-        <span className="h-2 w-3 rounded-sm border border-current" />
-        <span className="h-2 w-3 rounded-sm border border-current bg-current" />
-        <span className="text-[12px]">100</span>
+    <div className={cn("px-5 pt-0.5", className)}>
+      <div className="flex h-8 items-center justify-between text-[12px] font-semibold tracking-[-0.01em] opacity-[0.98] [text-shadow:0_1px_1px_rgba(0,0,0,0.12)]">
+        <span className="tabular-nums">{time}</span>
+        <div className="flex items-center gap-1.5">
+          <StatusCellDots className="h-[10px] w-[17px]" />
+          <StatusWifi className="h-[10px] w-[16px]" />
+          <StatusBattery className="h-[11px] w-[24px]" level={100} />
+        </div>
       </div>
     </div>
   );
+}
+
+function adjustCountText(value: string, delta: number) {
+  const compact = value.replace(/,/g, "").trim();
+  const number = Number.parseInt(compact, 10);
+  if (!Number.isFinite(number)) return value;
+  return String(Math.max(0, number + delta));
+}
+
+function visibleCommentCount(comments: InstagramComment[]) {
+  return (comments || []).filter((comment) => comment.visible !== false).length;
 }
 
 function EmptyImage({ label, themeKey = "instagram" }: { label: string; themeKey?: InstagramThemeKey }) {
@@ -249,10 +321,49 @@ function EmptyImage({ label, themeKey = "instagram" }: { label: string; themeKey
   );
 }
 
-function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
+function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>> }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const theme = instagramThemes[settings.themeKey || "instagram"] || instagramThemes.instagram;
   const visibleComments = (settings.comments || []).filter((comment) => comment.visible !== false);
+  const postImages = settings.postImages?.length ? settings.postImages : settings.postImage ? [settings.postImage] : [];
+  const safeImageIndex = postImages.length ? Math.min(activeImageIndex, postImages.length - 1) : 0;
+  const currentPostImage = postImages[safeImageIndex] || null;
+  const commentCountLabel = String(visibleCommentCount(settings.comments || []));
+
+  const togglePostLike = () => {
+    setSettings((prev) => ({
+      ...prev,
+      postLiked: !prev.postLiked,
+      likeCount: adjustCountText(prev.likeCount, prev.postLiked ? -1 : 1),
+    }));
+  };
+
+  const submitRuntimeComment = () => {
+    const text = commentDraft.trim();
+    if (!text) return;
+    const nextComment: InstagramComment = {
+      id: `runtime-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      username: "guest_user",
+      displayName: "ゲスト",
+      avatarLabel: "ゲ",
+      avatarImage: null,
+      text,
+      likeCount: "0",
+      visible: true,
+    };
+    setSettings((prev) => {
+      const nextComments = [...(prev.comments || []), nextComment];
+      return {
+        ...prev,
+        comments: nextComments,
+        commentCount: String(visibleCommentCount(nextComments)),
+      };
+    });
+    setCommentDraft("");
+    setCommentsOpen(true);
+  };
 
   return (
     <div className={cn("relative flex h-full flex-col", theme.root, theme.text)}>
@@ -272,15 +383,59 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
           </div>
           <MoreHorizontal className="h-5 w-5" />
         </div>
-        {settings.postImage ? (
-          <img src={settings.postImage} alt="post" className="aspect-square w-full object-cover" />
-        ) : (
-          <EmptyImage label="投稿画像を設定できます" themeKey={settings.themeKey} />
+
+        <div className="relative">
+          {currentPostImage ? (
+            <img src={currentPostImage} alt="post" className="aspect-square w-full object-cover" />
+          ) : (
+            <EmptyImage label="投稿画像を設定できます" themeKey={settings.themeKey} />
+          )}
+
+          {postImages.length > 1 && (
+            <>
+              <div className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-xs font-semibold text-white backdrop-blur">
+                {safeImageIndex + 1}/{postImages.length}
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveImageIndex((prev) => (prev - 1 + postImages.length) % postImages.length)}
+                className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur active:scale-95"
+                aria-label="前の画像"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveImageIndex((prev) => (prev + 1) % postImages.length)}
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur active:scale-95"
+                aria-label="次の画像"
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
+
+        {postImages.length > 1 && (
+          <div className="mt-2 flex justify-center gap-1.5">
+            {postImages.map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => setActiveImageIndex(index)}
+                className={cn("h-1.5 w-1.5 rounded-full", index === safeImageIndex ? "bg-blue-500" : "bg-black/20")}
+                aria-label={`画像${index + 1}を表示`}
+              />
+            ))}
+          </div>
         )}
+
         <div className="space-y-2 px-3 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Heart className="h-6 w-6" />
+              <button type="button" onClick={togglePostLike} className="rounded-full active:scale-95" aria-label="いいね">
+                <Heart className={cn("h-6 w-6", settings.postLiked && "fill-red-500 text-red-500")} />
+              </button>
               <button
                 type="button"
                 onClick={() => setCommentsOpen(true)}
@@ -288,7 +443,7 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
                 aria-label="コメント欄を開く"
               >
                 <MessageCircle className="h-6 w-6" />
-                <span className="text-xs font-semibold leading-none">{settings.commentCount}</span>
+                <span className="text-xs font-semibold leading-none">{commentCountLabel}</span>
               </button>
               <div className="flex items-center gap-1.5">
                 <Repeat2 className="h-6 w-6" />
@@ -300,19 +455,10 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
           </div>
           <div className="text-sm font-semibold">いいね！{settings.likeCount}件</div>
           <div className="text-sm leading-relaxed"><span className="font-semibold">{settings.username}</span> {settings.caption}</div>
-          {visibleComments.slice(0, 2).map((comment) => (
-            <button
-              key={comment.id}
-              type="button"
-              onClick={() => setCommentsOpen(true)}
-              className={cn("block w-full truncate text-left text-sm", theme.muted)}
-            >
-              <span className={cn("font-semibold", theme.text)}>{comment.username}</span> {comment.text}
-            </button>
-          ))}
           <div className={cn("text-xs uppercase", theme.muted)}>{settings.postTime}</div>
         </div>
       </div>
+
       <div className={cn("flex h-12 items-center justify-around border-t", theme.border, theme.surface, theme.icon)}>
         <Home className="h-6 w-6" /><Search className="h-6 w-6" /><Plus className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Avatar label={settings.avatarLabel} image={settings.avatarImage} size="h-6 w-6" themeKey={settings.themeKey} />
       </div>
@@ -320,16 +466,17 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
       {commentsOpen && (
         <div className="absolute inset-0 z-30 flex items-end bg-black/25">
           <button type="button" aria-label="コメント欄を閉じる" className="absolute inset-0" onClick={() => setCommentsOpen(false)} />
-          <div className={cn("relative z-10 flex max-h-[62%] w-full flex-col overflow-hidden rounded-t-[28px] shadow-2xl", theme.surface, theme.text)}>
+          <div className={cn("relative z-10 flex max-h-[72%] w-full flex-col overflow-hidden rounded-t-[28px] shadow-2xl", theme.surface, theme.text)}>
             <div className={cn("flex shrink-0 items-center justify-between border-b px-4 py-3", theme.border)}>
               <div>
                 <div className="text-sm font-semibold">コメント</div>
-                <div className={cn("text-xs", theme.muted)}>{settings.commentCount}件</div>
+                <div className={cn("text-xs", theme.muted)}>{commentCountLabel}件</div>
               </div>
               <button type="button" onClick={() => setCommentsOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06]">
                 <X className="h-4 w-4" />
               </button>
             </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
               {visibleComments.length === 0 ? (
                 <div className={cn("py-8 text-center text-sm", theme.muted)}>表示中のコメントはありません</div>
@@ -352,6 +499,18 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
                 </div>
               )}
             </div>
+
+            <div className={cn("flex shrink-0 items-center gap-2 border-t px-3 py-3", theme.border)}>
+              <Avatar label="ゲ" image={null} size="h-8 w-8" themeKey={settings.themeKey} />
+              <input
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") submitRuntimeComment(); }}
+                placeholder="コメントを追加..."
+                className={cn("min-w-0 flex-1 rounded-full border px-4 py-2 text-sm outline-none", theme.border, theme.surfaceAlt, theme.text)}
+              />
+              <button type="button" onClick={submitRuntimeComment} className="rounded-full px-3 py-2 text-sm font-semibold text-blue-500 active:scale-95">投稿</button>
+            </div>
           </div>
         </div>
       )}
@@ -359,10 +518,24 @@ function InstagramPostPreview({ settings }: { settings: InstagramSettings }) {
   );
 }
 
-function InstagramStoryPreview({ settings }: { settings: InstagramSettings }) {
+function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>> }) {
+  const [messageDraft, setMessageDraft] = useState("");
   const storyStyle = settings.storyImage
     ? { backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,.28)), url(${settings.storyImage})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { background: "linear-gradient(135deg, #f97316, #db2777, #7c3aed)" };
+
+  const toggleStoryLike = () => {
+    setSettings((prev) => ({ ...prev, storyLiked: !prev.storyLiked }));
+  };
+
+  const submitStoryMessage = () => {
+    const text = messageDraft.trim();
+    if (!text) return;
+    setSettings((prev) => ({ ...prev, storyMessages: [...(prev.storyMessages || []), text] }));
+    setMessageDraft("");
+  };
+
+  const latestMessage = settings.storyMessages?.[settings.storyMessages.length - 1];
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-black text-white" style={storyStyle}>
@@ -386,10 +559,27 @@ function InstagramStoryPreview({ settings }: { settings: InstagramSettings }) {
           {settings.storyText || "ストーリーテキスト"}
         </div>
       </div>
+      {latestMessage && (
+        <div className="mx-4 mb-3 flex justify-end">
+          <div className="max-w-[78%] rounded-2xl bg-white/90 px-3 py-2 text-xs font-medium text-black shadow-lg">
+            送信済み：{latestMessage}
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 px-4 pb-5">
-        <div className="flex-1 rounded-full border border-white/80 bg-black/20 px-4 py-3 text-sm text-white/90 backdrop-blur">{settings.storyReplyPlaceholder}</div>
-        <Heart className="h-7 w-7" />
-        <Send className="h-7 w-7" />
+        <input
+          value={messageDraft}
+          onChange={(e) => setMessageDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submitStoryMessage(); }}
+          placeholder={settings.storyReplyPlaceholder || "メッセージを送信"}
+          className="min-w-0 flex-1 rounded-full border border-white/80 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/75 outline-none backdrop-blur"
+        />
+        <button type="button" onClick={toggleStoryLike} className="rounded-full active:scale-95" aria-label="ストーリーにいいね">
+          <Heart className={cn("h-7 w-7", settings.storyLiked && "fill-red-500 text-red-500")} />
+        </button>
+        <button type="button" onClick={submitStoryMessage} className="rounded-full active:scale-95" aria-label="メッセージを送信">
+          <Send className="h-7 w-7" />
+        </button>
       </div>
     </div>
   );
@@ -421,8 +611,33 @@ export default function InstagramMockCreator() {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => update(key, String(reader.result) as InstagramSettings[typeof key]);
+    reader.onload = () => {
+      const result = String(reader.result);
+      if (key === "postImage") {
+        setSettings((prev) => ({ ...prev, postImage: result, postImages: [result] }));
+        return;
+      }
+      update(key, result as InstagramSettings[typeof key]);
+    };
     reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handlePostImagesUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    if (files.length === 0) return;
+
+    Promise.all(files.map((file) => new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsDataURL(file);
+    }))).then((images) => {
+      setSettings((prev) => ({
+        ...prev,
+        postImage: images[0] || prev.postImage,
+        postImages: images,
+      }));
+    });
     event.target.value = "";
   };
 
@@ -472,7 +687,7 @@ export default function InstagramMockCreator() {
 
   const screen = (
     <div className="h-full w-full overflow-hidden rounded-[inherit] bg-white">
-      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} /> : <InstagramStoryPreview settings={settings} />}
+      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} />}
     </div>
   );
 
@@ -543,7 +758,7 @@ export default function InstagramMockCreator() {
 
                   {settings.screenType === "post" ? (
                     <SectionCard icon={ImageIcon} title="投稿内容">
-                      <div className="flex items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿画像</FileButton><Button variant="outline" onClick={() => update("postImage", null)}>解除</Button></div>
+                      <div className="flex flex-wrap items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "postImage")}>投稿画像</FileButton><MultiFileButton accept="image/*" onFiles={handlePostImagesUpload}>複数画像</MultiFileButton><Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, postImage: null, postImages: [] }))}>解除</Button></div><div className="text-xs text-black/50">複数画像を選ぶと、投稿画面で左右ボタンとドットが表示されます。</div>
                       <div className="space-y-2"><Label>キャプション</Label><Textarea value={settings.caption} onChange={(e) => update("caption", e.target.value)} /></div>
                       <div className="grid grid-cols-3 gap-3"><div className="space-y-2"><Label>いいね数</Label><Input value={settings.likeCount} onChange={(e) => update("likeCount", e.target.value)} /></div><div className="space-y-2"><Label>コメント数</Label><Input value={settings.commentCount} onChange={(e) => update("commentCount", e.target.value)} /></div><div className="space-y-2"><Label>リポスト数</Label><Input value={settings.repostCount} onChange={(e) => update("repostCount", e.target.value)} /></div></div>
                       <div className="space-y-2"><Label>投稿時刻</Label><Input value={settings.postTime} onChange={(e) => update("postTime", e.target.value)} /></div>
