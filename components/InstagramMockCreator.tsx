@@ -757,6 +757,7 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
           onKeyDown={(e) => { if (e.key === "Enter") submitStoryMessage(); }}
           placeholder={settings.storyReplyPlaceholder || "メッセージを送信"}
           className="min-w-0 flex-1 rounded-full border border-white/80 bg-black/20 px-4 py-3 text-sm text-white placeholder:text-white/75 outline-none backdrop-blur"
+        />
         <button type="button" onClick={toggleStoryLike} className="rounded-full active:scale-95" aria-label="ストーリーにいいね">
           <Heart className={cn("h-7 w-7", settings.storyLiked && "fill-red-500 text-red-500")} />
         </button>
