@@ -191,7 +191,7 @@ const initialSettings: XSettings = {
   deviceTime: "21:12",
   showStatusBar: true,
   fullScreenMode: false,
-  deviceFrameMode: true,
+  deviceFrameMode: false,
   showSettingsButton: true,
   bgColor: "#e5e7eb",
 };
@@ -576,6 +576,21 @@ export default function XMockCreator() {
 
   const removePreset = (id: string) => setSavedPresets((prev) => prev.filter((preset) => preset.id !== id));
 
+  const setFullscreenMode = async (enabled: boolean) => {
+    update("fullScreenMode", enabled);
+    if (typeof document === "undefined") return;
+    try {
+      if (enabled && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      if (!enabled && document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // iOS Safariなど、Fullscreen API非対応環境ではアプリ内表示だけ切り替える
+    }
+  };
+
   const header = (
     <>
       {statusBarVisible && <ChatStatusBar time={settings.deviceTime} className="px-5 pb-2 pt-3" />}
@@ -785,16 +800,21 @@ export default function XMockCreator() {
     </div>
   );
 
-  const phone = settings.fullScreenMode ? (
-    <div className="h-screen w-full overflow-hidden">{phoneContent}</div>
+  const phone = settings.deviceFrameMode && !settings.fullScreenMode ? (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-black p-3">
+      <div className="relative h-[min(92dvh,860px)] w-[min(94vw,430px)] overflow-hidden rounded-[38px] border-[10px] border-black bg-black shadow-2xl">
+        {phoneContent}
+      </div>
+    </div>
   ) : (
-    <div className={cls("mx-auto overflow-hidden", settings.deviceFrameMode ? "h-[760px] w-[380px] rounded-[42px] border-[10px] border-black shadow-2xl" : "h-[760px] w-[380px] rounded-[28px] border border-black/10 shadow-xl")}>{phoneContent}</div>
+    <div className="mx-auto h-[100dvh] w-full max-w-md overflow-hidden bg-white" style={{ backgroundColor: settings.bgColor || undefined }}>
+      {phoneContent}
+    </div>
   );
 
   return (
-    <main className={cls("min-h-screen", theme.page)} style={{ backgroundColor: settings.bgColor || undefined }}>
-      <div className={cls("grid min-h-screen gap-6 p-4", settings.fullScreenMode ? "grid-cols-1 p-0" : "lg:grid-cols-[420px_1fr]")}> 
-        <section className={cls("flex items-start justify-center", settings.fullScreenMode ? "" : "lg:sticky lg:top-4")}>{phone}</section>
+    <main className={cls("relative min-h-[100dvh]", theme.page)} style={{ backgroundColor: settings.bgColor || undefined }}>
+      {phone}
 
         {settingsOpen && (
           <div className="fixed inset-0 z-50 bg-black/35">
@@ -1070,7 +1090,7 @@ export default function XMockCreator() {
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">通常表示時のみ非表示可。フルスクリーン時は復帰用に表示</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーン</div><div className="text-xs text-black/50">スマホ枠と設定画面を外す</div></div><Switch checked={settings.fullScreenMode} onChange={(v) => update("fullScreenMode", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーン</div><div className="text-xs text-black/50">スマホ枠と設定画面を外す</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>
               )}
@@ -1091,7 +1111,6 @@ export default function XMockCreator() {
             </div>
           </div>
         )}
-      </div>
     </main>
   );
 }
