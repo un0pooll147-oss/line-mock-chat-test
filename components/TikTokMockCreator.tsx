@@ -406,9 +406,9 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
       <MediaView url={currentUrl} />
       <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-b", theme.overlay)} />
 
-      {settings.showStatusBar && !isFullScreen && <div className="absolute left-0 right-0 top-0 z-20"><StatusBar time={settings.deviceTime} /></div>}
+      {settings.showStatusBar && <div className="absolute left-0 right-0 top-0 z-20"><StatusBar time={settings.deviceTime} /></div>}
 
-      <header className={cn("absolute left-0 right-0 z-20 px-3", settings.showStatusBar && !isFullScreen ? "top-9" : "top-3")}>
+      <header className={cn("absolute left-0 right-0 z-20 px-3", settings.showStatusBar ? "top-9" : "top-3")}>
         <div className="grid grid-cols-[54px_1fr_88px] items-center gap-1 text-white drop-shadow">
           <div className="flex items-center">
             <span className="rounded-full border border-white/70 px-2 py-0.5 text-[11px] font-extrabold leading-none tracking-tight">LIVE</span>
@@ -436,7 +436,7 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
         <>
           <button type="button" onClick={() => goMedia(-1)} className="absolute left-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="前のメディア" />
           <button type="button" onClick={() => goMedia(1)} className="absolute right-0 top-20 z-10 h-[calc(100%-160px)] w-1/3" aria-label="次のメディア" />
-          <div className={cn("absolute right-4 z-20 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur", settings.showStatusBar && !isFullScreen ? "top-[88px]" : "top-[52px]")}>
+          <div className={cn("absolute right-4 z-20 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur", settings.showStatusBar ? "top-[88px]" : "top-[52px]")}>
             {settings.currentMediaIndex + 1}/{media.length}
           </div>
           <div className="absolute left-1/2 top-20 z-20 flex -translate-x-1/2 gap-1">
@@ -697,8 +697,12 @@ export default function TikTokMockCreator() {
     <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50" : "")}> 
       <div className={cn("relative mx-auto flex min-h-screen items-center justify-center", settings.fullScreenMode ? "h-screen w-screen p-0" : "h-screen w-screen p-0")}> 
         {settings.deviceFrameMode ? (
-          <div className="relative h-[min(92vh,860px)] aspect-[9/19.5] overflow-hidden rounded-[46px] border-[10px] border-neutral-950 bg-black shadow-2xl">
-            {screen}
+          <div className={cn("mx-auto flex min-h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+            <div className="relative flex-1 overflow-hidden p-4">
+              <div className="relative h-full min-h-[calc(100dvh-32px)] w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
+                {screen}
+              </div>
+            </div>
           </div>
         ) : (
           <div className="relative h-screen w-screen overflow-hidden bg-black">{screen}</div>

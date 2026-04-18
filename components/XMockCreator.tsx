@@ -923,9 +923,11 @@ export default function XMockCreator() {
   );
 
   const phone = settings.deviceFrameMode ? (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-black p-3">
-      <div className="relative h-[min(92dvh,860px)] w-[min(94vw,430px)] overflow-hidden rounded-[38px] border-[10px] border-black bg-black shadow-2xl">
-        {phoneContent}
+    <div className={cls("mx-auto flex min-h-[100dvh] flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+      <div className="relative flex-1 overflow-hidden p-4">
+        <div className="relative h-full min-h-[calc(100dvh-32px)] w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
+          {phoneContent}
+        </div>
       </div>
     </div>
   ) : (
