@@ -380,7 +380,7 @@ function EmptyImage({ label, themeKey = "instagram" }: { label: string; themeKey
   );
 }
 
-function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>> }) {
+function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>>; onOpenSettings: () => void }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -440,7 +440,7 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
               <div className={cn("text-xs", theme.muted)}>{settings.displayName}</div>
             </div>
           </div>
-          <button type="button" onClick={() => setSettingsOpen(true)} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
+          <button type="button" onClick={onOpenSettings} className="rounded-full p-1 transition hover:bg-black/5" aria-label="設定を開く"><MoreHorizontal className="h-5 w-5" /></button>
         </div>
 
         <div className="relative">
@@ -933,7 +933,7 @@ export default function InstagramMockCreator() {
 
   const screen = (
     <div className="h-full w-full overflow-hidden rounded-[inherit] bg-white">
-      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} />}
+      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} />}
     </div>
   );
 
@@ -962,10 +962,6 @@ export default function InstagramMockCreator() {
         >
           <Settings2 className="h-5 w-5" />
         </button>
-      )}
-
-      {!settings.showSettingsButton && (
-        <button type="button" onClick={() => setSettingsOpen(true)} className="fixed bottom-0 right-0 z-40 h-16 w-16 opacity-0" aria-label="隠し設定ボタン" />
       )}
 
       {settingsOpen && (

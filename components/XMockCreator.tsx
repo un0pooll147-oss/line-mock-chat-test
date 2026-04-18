@@ -23,7 +23,7 @@ import {
   X as XIcon,
 } from "lucide-react";
 
-type XScreenType = "timeline" | "notifications" | "profile";
+type XScreenType = "post" | "timeline" | "notifications" | "profile";
 type XThemeKey = "light" | "dark";
 type SettingsTab = "create" | "replies" | "timeline" | "profile" | "notifications" | "saved" | "screen" | "modes";
 
@@ -244,8 +244,8 @@ const themes: Record<XThemeKey, {
 function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSettings {
   const merged = { ...initialSettings, ...(value || {}) } as XSettings;
   if (merged.themeKey !== "dark") merged.themeKey = "light";
-  if ((merged as any).screenType === "detail") merged.screenType = "timeline";
-  if (!["timeline", "notifications", "profile"].includes(merged.screenType)) merged.screenType = "timeline";
+  if ((merged as any).screenType === "detail") merged.screenType = "post";
+  if (!["post", "timeline", "notifications", "profile"].includes(merged.screenType)) merged.screenType = "timeline";
   if (!Array.isArray(merged.profilePosts)) merged.profilePosts = [];
   if (typeof (merged as any).profileFollowed !== "boolean") merged.profileFollowed = false;
   if (!(merged as any).replyTime) merged.replyTime = "今";
@@ -437,7 +437,7 @@ export default function XMockCreator() {
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
 
   const theme = themes[settings.themeKey] || themes.light;
-  const statusBarVisible = settings.showStatusBar && !settings.fullScreenMode;
+  const statusBarVisible = settings.showStatusBar;
   const displayReplyCount = settings.replyCount + settings.replies.length;
   const displayLikeCount = settings.likeCount + (settings.liked ? 1 : 0);
   const displayRepostCount = settings.repostCount + (settings.reposted ? 1 : 0);
@@ -617,7 +617,7 @@ export default function XMockCreator() {
         </button>
         <div className="min-w-0 max-w-[62%] text-center">
           <div className="truncate text-[16px] font-black leading-tight">{settings.appName}</div>
-          {settings.showScreenLabel && <div className={cls("mt-0.5 text-[10px]", theme.sub)}>{settings.screenType === "notifications" ? "通知" : settings.screenType === "profile" ? "プロフィール" : "タイムライン"}</div>}
+          {settings.showScreenLabel && <div className={cls("mt-0.5 text-[10px]", theme.sub)}>{settings.screenType === "post" ? "ポスト" : settings.screenType === "notifications" ? "通知" : settings.screenType === "profile" ? "プロフィール" : "タイムライン"}</div>}
         </div>
         <div className="absolute right-4 flex items-center gap-3">
           <Search className="h-5 w-5" />
@@ -806,11 +806,33 @@ export default function XMockCreator() {
       ) : settings.profilePosts.map((post) => timelinePostBlock(post, updateProfilePost))}
     </div>
   );
+  const bottomNav = (
+    <div className={cls("absolute inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t px-4 py-2", theme.border, theme.panel)}>
+      <button type="button" onClick={() => update("screenType", "timeline")} className={cls("grid place-items-center rounded-2xl py-2 transition active:bg-current/10", settings.screenType === "timeline" ? theme.accent : theme.sub)} aria-label="タイムライン">
+        <Search className="h-5 w-5" />
+      </button>
+      <button type="button" onClick={() => update("screenType", "post")} className={cls("grid place-items-center rounded-2xl py-2 transition active:bg-current/10", settings.screenType === "post" ? theme.accent : theme.sub)} aria-label="ポスト">
+        <MessageCircle className="h-5 w-5" />
+      </button>
+      <button type="button" onClick={() => update("screenType", "notifications")} className={cls("grid place-items-center rounded-2xl py-2 transition active:bg-current/10", settings.screenType === "notifications" ? theme.accent : theme.sub)} aria-label="通知">
+        <Bell className="h-5 w-5" />
+      </button>
+      <button type="button" onClick={() => update("screenType", "profile")} className={cls("grid place-items-center rounded-2xl py-2 transition active:bg-current/10", settings.screenType === "profile" ? theme.accent : theme.sub)} aria-label="プロフィール">
+        <UserCircle2 className="h-5 w-5" />
+      </button>
+    </div>
+  );
+
   const phoneContent = (
     <div className={cls("relative h-full overflow-hidden", theme.phone, theme.text)}>
       {header}
-      <div className={cls(statusBarVisible ? "h-[calc(100%-86px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-20")}>
-        {settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "profile" ? profileScreen : (
+      <div className={cls(statusBarVisible ? "h-[calc(100%-86px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-24")}>
+        {settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "profile" ? profileScreen : settings.screenType === "post" ? (
+          <>
+            {postBlock(false)}
+            {repliesBlock}
+          </>
+        ) : (
           <>
             <div className={cls("border-b px-4 py-3 text-sm font-black", theme.border)}>おすすめ</div>
             {postBlock(true)}
@@ -819,13 +841,14 @@ export default function XMockCreator() {
           </>
         )}
       </div>
-      {!settingsOpen && (settings.showSettingsButton || settings.fullScreenMode) && (
-        <button type="button" onClick={() => setSettingsOpen(true)} className="absolute bottom-4 right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-black text-white shadow-lg"><Settings2 className="h-5 w-5" /></button>
+      {bottomNav}
+      {!settingsOpen && settings.showSettingsButton && (
+        <button type="button" onClick={() => setSettingsOpen(true)} className="absolute bottom-20 right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-black text-white shadow-lg"><Settings2 className="h-5 w-5" /></button>
       )}
     </div>
   );
 
-  const phone = settings.deviceFrameMode && !settings.fullScreenMode ? (
+  const phone = settings.deviceFrameMode ? (
     <div className="flex min-h-[100dvh] items-center justify-center bg-black p-3">
       <div className="relative h-[min(92dvh,860px)] w-[min(94vw,430px)] overflow-hidden rounded-[38px] border-[10px] border-black bg-black shadow-2xl">
         {phoneContent}
@@ -866,14 +889,14 @@ export default function XMockCreator() {
               {activeTab === "create" && (
                 <>
                   <SectionCard icon={Palette} title="表示タイプ / テーマ">
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      {(["timeline", "notifications", "profile"] as XScreenType[]).map((type) => <Button key={type} variant={settings.screenType === type ? "primary" : "outline"} onClick={() => update("screenType", type)} className="px-2">{type === "timeline" ? "タイムライン" : type === "notifications" ? "通知" : "プロフィール"}</Button>)}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {(["post", "timeline", "notifications", "profile"] as XScreenType[]).map((type) => <Button key={type} variant={settings.screenType === type ? "primary" : "outline"} onClick={() => update("screenType", type)} className="px-2">{type === "post" ? "ポスト" : type === "timeline" ? "タイムライン" : type === "notifications" ? "通知" : "プロフィール"}</Button>)}
                     </div>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {(Object.keys(themes) as XThemeKey[]).map((key) => <Button key={key} variant={settings.themeKey === key ? "primary" : "outline"} onClick={() => update("themeKey", key)}>{themes[key].label}</Button>)}
                     </div>
                     <Field label="アプリ名" value={settings.appName} onChange={(v) => update("appName", v)} />
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div className="min-w-0"><div className="text-sm font-bold">画面名表記</div><div className="text-xs text-black/50">Postly下の「タイムライン / 通知 / プロフィール」を表示</div></div><Switch checked={settings.showScreenLabel} onChange={(v) => update("showScreenLabel", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div className="min-w-0"><div className="text-sm font-bold">画面名表記</div><div className="text-xs text-black/50">Postly下の「ポスト / タイムライン / 通知 / プロフィール」を表示</div></div><Switch checked={settings.showScreenLabel} onChange={(v) => update("showScreenLabel", v)} /></div>
                   </SectionCard>
 
                   <SectionCard icon={UserCircle2} title="投稿ユーザー">
@@ -909,7 +932,7 @@ export default function XMockCreator() {
                       <Field label="いいね数" type="number" value={String(settings.likeCount)} onChange={(v) => update("likeCount", Number(v) || 0)} />
                       <Field label="表示数" value={settings.viewCount} onChange={(v) => update("viewCount", v)} />
                     </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <Button variant={settings.liked ? "primary" : "outline"} onClick={() => update("liked", !settings.liked)}>いいね</Button>
                       <Button variant={settings.reposted ? "primary" : "outline"} onClick={() => update("reposted", !settings.reposted)}>リポスト</Button>
                       <Button variant={settings.bookmarked ? "primary" : "outline"} onClick={() => update("bookmarked", !settings.bookmarked)}>保存</Button>
@@ -1119,7 +1142,7 @@ export default function XMockCreator() {
                     <Field label="ステータスバー時刻" value={settings.deviceTime} onChange={(v) => update("deviceTime", v)} />
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示</div></div><Switch checked={settings.deviceFrameMode} onChange={(v) => update("deviceFrameMode", v)} /></div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onChange={(v) => update("showSettingsButton", v)} /></div>
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onChange={setFullscreenMode} /></div>
                   </SectionCard>
                 </>
