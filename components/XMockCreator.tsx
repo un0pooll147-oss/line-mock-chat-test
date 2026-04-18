@@ -25,7 +25,40 @@ import {
 
 type XScreenType = "detail" | "timeline" | "notifications";
 type XThemeKey = "light" | "dark" | "blue" | "red" | "purple" | "soft";
-type SettingsTab = "create" | "replies" | "saved" | "screen" | "modes";
+type SettingsTab = "create" | "replies" | "timeline" | "notifications" | "saved" | "screen" | "modes";
+
+
+type TimelinePost = {
+  id: string;
+  displayName: string;
+  username: string;
+  avatarLabel: string;
+  avatarImage: string | null;
+  verified: boolean;
+  text: string;
+  time: string;
+  images: string[];
+  currentImageIndex: number;
+  replyCount: number;
+  repostCount: number;
+  likeCount: number;
+  viewCount: string;
+  liked: boolean;
+  reposted: boolean;
+  bookmarked: boolean;
+};
+
+type NotificationItem = {
+  id: string;
+  kind: "reply" | "like" | "repost" | "follow" | "custom";
+  displayName: string;
+  username: string;
+  avatarLabel: string;
+  avatarImage: string | null;
+  title: string;
+  text: string;
+  time: string;
+};
 
 type ReplyItem = {
   id: string;
@@ -76,6 +109,8 @@ type XSettings = {
   replies: ReplyItem[];
   notificationTitle: string;
   notificationText: string;
+  timelinePosts: TimelinePost[];
+  notifications: NotificationItem[];
   deviceTime: string;
   showStatusBar: boolean;
   fullScreenMode: boolean;
@@ -120,6 +155,15 @@ const initialSettings: XSettings = {
   ],
   notificationTitle: "新しい通知",
   notificationText: "あなたの投稿に新しい返信がありました",
+  timelinePosts: [
+    { id: "t1", displayName: "sample user", username: "sample", avatarLabel: "S", avatarImage: null, verified: false, text: "撮影用のタイムライン投稿。背景として自然に流せます。", time: "18分", images: [], currentImageIndex: 0, replyCount: 12, repostCount: 24, likeCount: 85, viewCount: "1,902", liked: false, reposted: false, bookmarked: false },
+    { id: "t2", displayName: "news mock", username: "news_mock", avatarLabel: "N", avatarImage: null, verified: false, text: "これは架空SNSの画面です。実在サービス名を避けて撮影できます。", time: "31分", images: [], currentImageIndex: 0, replyCount: 4, repostCount: 18, likeCount: 64, viewCount: "842", liked: false, reposted: false, bookmarked: false },
+  ],
+  notifications: [
+    { id: "n1", kind: "like", displayName: "sample user", username: "sample", avatarLabel: "S", avatarImage: null, title: "いいねされました", text: "あなたの投稿にいいねしました", time: "2分" },
+    { id: "n2", kind: "repost", displayName: "news mock", username: "news_mock", avatarLabel: "N", avatarImage: null, title: "リポストされました", text: "あなたの投稿がリポストされました", time: "12分" },
+    { id: "n3", kind: "reply", displayName: "Guest", username: "guest_user", avatarLabel: "G", avatarImage: null, title: "新しい返信", text: "これ、続きが気になる。", time: "今" },
+  ],
   deviceTime: "21:12",
   showStatusBar: true,
   fullScreenMode: false,
@@ -358,13 +402,7 @@ function ActionStat({ icon: Icon, value, active, activeClass, onClick }: { icon:
 }
 
 function ImageGrid({ images, currentImageIndex, setCurrentImageIndex }: { images: string[]; currentImageIndex: number; setCurrentImageIndex: (index: number) => void }) {
-  if (images.length === 0) {
-    return (
-      <div className="mt-3 flex aspect-[4/3] items-center justify-center rounded-3xl border border-dashed border-current/20 bg-current/5 text-xs opacity-55">
-        画像なし / 撮影用の投稿画像をアップロード
-      </div>
-    );
-  }
+  if (images.length === 0) return null;
 
   const currentImage = images[Math.max(0, Math.min(currentImageIndex, images.length - 1))];
   return (
@@ -441,6 +479,56 @@ export default function XMockCreator() {
   };
 
   const deleteReply = (id: string) => update("replies", settings.replies.filter((reply) => reply.id !== id));
+
+  const updateTimelinePost = <K extends keyof TimelinePost>(id: string, key: K, value: TimelinePost[K]) => {
+    update("timelinePosts", settings.timelinePosts.map((post) => post.id === id ? { ...post, [key]: value } : post));
+  };
+
+  const addTimelinePost = () => {
+    const post: TimelinePost = {
+      id: String(Date.now()),
+      displayName: "new user",
+      username: "new_user",
+      avatarLabel: "N",
+      avatarImage: null,
+      verified: false,
+      text: "新しいタイムライン投稿です。",
+      time: "今",
+      images: [],
+      currentImageIndex: 0,
+      replyCount: 0,
+      repostCount: 0,
+      likeCount: 0,
+      viewCount: "0",
+      liked: false,
+      reposted: false,
+      bookmarked: false,
+    };
+    update("timelinePosts", [post, ...settings.timelinePosts]);
+  };
+
+  const deleteTimelinePost = (id: string) => update("timelinePosts", settings.timelinePosts.filter((post) => post.id !== id));
+
+  const updateNotification = <K extends keyof NotificationItem>(id: string, key: K, value: NotificationItem[K]) => {
+    update("notifications", settings.notifications.map((item) => item.id === id ? { ...item, [key]: value } : item));
+  };
+
+  const addNotification = () => {
+    const item: NotificationItem = {
+      id: String(Date.now()),
+      kind: "custom",
+      displayName: "new user",
+      username: "new_user",
+      avatarLabel: "N",
+      avatarImage: null,
+      title: "新しい通知",
+      text: "通知文を入力できます。",
+      time: "今",
+    };
+    update("notifications", [item, ...settings.notifications]);
+  };
+
+  const deleteNotification = (id: string) => update("notifications", settings.notifications.filter((item) => item.id !== id));
 
   const toggleReplyLike = (id: string) => {
     update("replies", settings.replies.map((reply) => reply.id === id ? { ...reply, liked: !reply.liked, likeCount: reply.likeCount + (reply.liked ? -1 : 1) } : reply));
@@ -550,26 +638,60 @@ export default function XMockCreator() {
     </div>
   );
 
-  const notificationsScreen = (
-    <div className="px-4 py-4">
-      <div className={cls("rounded-3xl border p-4", theme.border, theme.soft)}>
-        <div className="mb-3 flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-sky-500 text-white"><Bell className="h-5 w-5" /></div>
-          <div>
-            <div className="text-sm font-black">{settings.notificationTitle}</div>
-            <div className={cls("text-xs", theme.sub)}>@{settings.username} への通知</div>
+  const timelinePostBlock = (post: TimelinePost) => (
+    <article key={post.id} className={cls("border-b px-4 py-4", theme.border)}>
+      <div className="flex items-start gap-3">
+        <Avatar image={post.avatarImage} label={post.avatarLabel} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <span className="truncate text-[15px] font-black">{post.displayName}</span>
+            {post.verified && <span className="grid h-4 w-4 place-items-center rounded-full bg-sky-500 text-white"><Check className="h-3 w-3" /></span>}
+            <span className={cls("truncate text-sm", theme.sub)}>@{post.username}</span>
+            <span className={cls("text-sm", theme.sub)}>· {post.time}</span>
+          </div>
+          <div className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">{post.text}</div>
+          <ImageGrid images={post.images} currentImageIndex={post.currentImageIndex} setCurrentImageIndex={(index) => updateTimelinePost(post.id, "currentImageIndex", index)} />
+          <div className="mt-3 flex items-center justify-between">
+            <ActionStat icon={MessageCircle} value={post.replyCount} />
+            <ActionStat icon={Repeat2} value={post.repostCount + (post.reposted ? 1 : 0)} active={post.reposted} activeClass="text-green-500" onClick={() => updateTimelinePost(post.id, "reposted", !post.reposted)} />
+            <ActionStat icon={Heart} value={post.likeCount + (post.liked ? 1 : 0)} active={post.liked} activeClass="text-pink-500" onClick={() => updateTimelinePost(post.id, "liked", !post.liked)} />
+            <ActionStat icon={BarChart3} value={post.viewCount} />
+            <button type="button" onClick={() => updateTimelinePost(post.id, "bookmarked", !post.bookmarked)} className={cls("transition", post.bookmarked ? "text-sky-500" : "opacity-70 hover:opacity-100")}><Bookmark className={cls("h-[18px] w-[18px]", post.bookmarked ? "fill-current" : "")} /></button>
           </div>
         </div>
-        <p className="text-sm leading-relaxed">{settings.notificationText}</p>
       </div>
-      <div className={cls("mt-4 rounded-3xl border p-4", theme.border)}>
-        <div className="mb-2 text-sm font-black">最近のアクティビティ</div>
-        <div className="space-y-3 text-sm">
-          <div className="flex gap-3"><Heart className="h-5 w-5 text-pink-500" /><span><b>{settings.displayName}</b> のポストにいいねが付きました</span></div>
-          <div className="flex gap-3"><Repeat2 className="h-5 w-5 text-green-500" /><span>投稿がリポストされました</span></div>
-          <div className="flex gap-3"><MessageCircle className="h-5 w-5 text-sky-500" /><span>新しい返信があります</span></div>
-        </div>
-      </div>
+    </article>
+  );
+
+  const notificationIcon = (kind: NotificationItem["kind"]) => {
+    if (kind === "like") return <Heart className="h-5 w-5 text-pink-500" />;
+    if (kind === "repost") return <Repeat2 className="h-5 w-5 text-green-500" />;
+    if (kind === "reply") return <MessageCircle className="h-5 w-5 text-sky-500" />;
+    if (kind === "follow") return <UserCircle2 className="h-5 w-5 text-purple-500" />;
+    return <Bell className="h-5 w-5 text-sky-500" />;
+  };
+
+  const notificationsScreen = (
+    <div>
+      {settings.notifications.length === 0 ? (
+        <div className="px-4 py-8 text-center text-sm opacity-50">通知はありません</div>
+      ) : settings.notifications.map((item) => (
+        <article key={item.id} className={cls("border-b px-4 py-4", theme.border)}>
+          <div className="flex gap-3">
+            <div className="mt-1">{notificationIcon(item.kind)}</div>
+            <Avatar image={item.avatarImage} label={item.avatarLabel} size="h-10 w-10" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <span className="truncate text-sm font-black">{item.displayName}</span>
+                <span className={cls("truncate text-xs", theme.sub)}>@{item.username}</span>
+                <span className={cls("text-xs", theme.sub)}>· {item.time}</span>
+              </div>
+              <div className="mt-1 text-sm font-bold">{item.title}</div>
+              <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{item.text}</div>
+            </div>
+          </div>
+        </article>
+      ))}
     </div>
   );
 
@@ -583,25 +705,7 @@ export default function XMockCreator() {
             {postBlock(settings.screenType === "timeline")}
             {settings.screenType === "timeline" ? (
               <>
-                <article className={cls("border-b px-4 py-4", theme.border)}>
-                  <div className="flex gap-3">
-                    <Avatar image={null} label="S" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex gap-1 text-sm"><b>sample user</b><span className={theme.sub}>@sample · 18分</span></div>
-                      <p className="mt-1 text-sm">撮影用のタイムライン投稿。背景として自然に流せます。</p>
-                      <div className={cls("mt-3 flex justify-between text-xs", theme.sub)}><span>12</span><span>24</span><span>85</span><span>1,902</span></div>
-                    </div>
-                  </div>
-                </article>
-                <article className={cls("border-b px-4 py-4", theme.border)}>
-                  <div className="flex gap-3">
-                    <Avatar image={null} label="N" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex gap-1 text-sm"><b>news mock</b><span className={theme.sub}>@news_mock · 31分</span></div>
-                      <p className="mt-1 text-sm">これは架空SNSの画面です。実在サービス名を避けて撮影できます。</p>
-                    </div>
-                  </div>
-                </article>
+                {settings.timelinePosts.map((post) => timelinePostBlock(post))}
               </>
             ) : repliesBlock}
           </>
@@ -637,6 +741,8 @@ export default function XMockCreator() {
             <div className="mb-4 flex flex-wrap gap-2">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "replies"} onClick={() => setActiveTab("replies")}>返信</TabButton>
+              <TabButton active={activeTab === "timeline"} onClick={() => setActiveTab("timeline")}>タイムライン</TabButton>
+              <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
@@ -716,6 +822,76 @@ export default function XMockCreator() {
                         <div className="mb-1 flex items-center gap-2 text-sm font-bold"><Avatar image={reply.avatarImage} label={reply.avatarLabel} size="h-7 w-7" />{reply.displayName}<span className="text-xs font-medium text-black/45">@{reply.username}</span></div>
                         <p className="text-sm text-black/75">{reply.text}</p>
                         <div className="mt-2 flex gap-2"><Button variant="outline" onClick={() => toggleReplyLike(reply.id)}>いいね切替</Button><Button variant="danger" onClick={() => deleteReply(reply.id)}>削除</Button></div>
+                      </div>
+                    ))}
+                  </SectionCard>
+                </>
+              )}
+
+              {activeTab === "timeline" && (
+                <>
+                  <SectionCard icon={MessageCircle} title="タイムライン投稿一覧">
+                    <Button onClick={addTimelinePost}>投稿を追加</Button>
+                    {settings.timelinePosts.length === 0 ? <p className="text-sm text-black/50">タイムライン投稿はありません。</p> : settings.timelinePosts.map((post, index) => (
+                      <div key={post.id} className="grid gap-3 rounded-3xl border border-black/10 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-black">タイムライン投稿 {index + 1}</div>
+                          <Button variant="danger" onClick={() => deleteTimelinePost(post.id)}><Trash2 className="h-4 w-4" />削除</Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="表示名" value={post.displayName} onChange={(v) => updateTimelinePost(post.id, "displayName", v)} />
+                          <Field label="ユーザー名" value={post.username} onChange={(v) => updateTimelinePost(post.id, "username", v)} />
+                          <Field label="アイコン文字" value={post.avatarLabel} onChange={(v) => updateTimelinePost(post.id, "avatarLabel", v.slice(0, 2))} />
+                          <Field label="投稿時間" value={post.time} onChange={(v) => updateTimelinePost(post.id, "time", v)} />
+                        </div>
+                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateTimelinePost(post.id, "avatarImage", url))} className="text-xs" /></label>
+                        <TextArea label="本文" value={post.text} onChange={(v) => updateTimelinePost(post.id, "text", v)} rows={4} />
+                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>投稿画像（複数可）</span><input type="file" accept="image/*" multiple onChange={(e) => readImageFiles(e.target.files, (urls) => { updateTimelinePost(post.id, "images", [...post.images, ...urls]); updateTimelinePost(post.id, "currentImageIndex", 0); })} className="text-xs" /></label>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" onClick={() => updateTimelinePost(post.id, "images", [])}>画像を全削除</Button>
+                          <Button variant={post.verified ? "primary" : "outline"} onClick={() => updateTimelinePost(post.id, "verified", !post.verified)}>認証バッジ</Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="返信数" type="number" value={String(post.replyCount)} onChange={(v) => updateTimelinePost(post.id, "replyCount", Number(v) || 0)} />
+                          <Field label="リポスト数" type="number" value={String(post.repostCount)} onChange={(v) => updateTimelinePost(post.id, "repostCount", Number(v) || 0)} />
+                          <Field label="いいね数" type="number" value={String(post.likeCount)} onChange={(v) => updateTimelinePost(post.id, "likeCount", Number(v) || 0)} />
+                          <Field label="表示数" value={post.viewCount} onChange={(v) => updateTimelinePost(post.id, "viewCount", v)} />
+                        </div>
+                      </div>
+                    ))}
+                  </SectionCard>
+                </>
+              )}
+
+              {activeTab === "notifications" && (
+                <>
+                  <SectionCard icon={Bell} title="通知一覧">
+                    <Button onClick={addNotification}>通知を追加</Button>
+                    {settings.notifications.length === 0 ? <p className="text-sm text-black/50">通知はありません。</p> : settings.notifications.map((item, index) => (
+                      <div key={item.id} className="grid gap-3 rounded-3xl border border-black/10 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-black">通知 {index + 1}</div>
+                          <Button variant="danger" onClick={() => deleteNotification(item.id)}><Trash2 className="h-4 w-4" />削除</Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <label className="grid gap-1.5 text-sm font-semibold text-black/70">
+                            <span>通知タイプ</span>
+                            <select value={item.kind} onChange={(e) => updateNotification(item.id, "kind", e.target.value as NotificationItem["kind"])} className="rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm outline-none focus:ring-4 focus:ring-black/10">
+                              <option value="reply">返信</option>
+                              <option value="like">いいね</option>
+                              <option value="repost">リポスト</option>
+                              <option value="follow">フォロー</option>
+                              <option value="custom">カスタム</option>
+                            </select>
+                          </label>
+                          <Field label="時間" value={item.time} onChange={(v) => updateNotification(item.id, "time", v)} />
+                          <Field label="表示名" value={item.displayName} onChange={(v) => updateNotification(item.id, "displayName", v)} />
+                          <Field label="ユーザー名" value={item.username} onChange={(v) => updateNotification(item.id, "username", v)} />
+                          <Field label="アイコン文字" value={item.avatarLabel} onChange={(v) => updateNotification(item.id, "avatarLabel", v.slice(0, 2))} />
+                        </div>
+                        <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateNotification(item.id, "avatarImage", url))} className="text-xs" /></label>
+                        <Field label="通知タイトル" value={item.title} onChange={(v) => updateNotification(item.id, "title", v)} />
+                        <TextArea label="通知本文" value={item.text} onChange={(v) => updateNotification(item.id, "text", v)} rows={3} />
                       </div>
                     ))}
                   </SectionCard>
