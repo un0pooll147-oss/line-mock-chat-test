@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ChangeEvent, useEffect, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bookmark,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 type InstagramScreenType = "post" | "story";
-type SettingsTab = "create" | "comments" | "screen" | "modes";
+type SettingsTab = "create" | "comments" | "saved" | "screen" | "modes";
 type InstagramThemeKey = "instagram" | "dark" | "soft" | "red" | "blue" | "yellow" | "purple";
 
 type InstagramComment = {
@@ -52,9 +52,19 @@ type InstagramSettings = {
   commentCount: string;
   repostCount: string;
   comments: InstagramComment[];
+  runtimeCommentUsername: string;
+  runtimeCommentDisplayName: string;
+  runtimeCommentAvatarLabel: string;
+  runtimeCommentAvatarImage: string | null;
   postTime: string;
   storyImage: string | null;
+  storyImages: string[];
   storyText: string;
+  storyShowText: boolean;
+  storyTextX: number;
+  storyTextY: number;
+  storyTextSize: number;
+  storyDurationSeconds: number;
   storyReplyPlaceholder: string;
   storyLiked: boolean;
   storyMessages: string[];
@@ -66,6 +76,14 @@ type InstagramSettings = {
 };
 
 const STORAGE_KEY = "instagram-mock-settings-v2";
+const SAVED_INSTAGRAM_STORAGE_KEY = "instagram-mock-saved-presets-v1";
+
+type SavedInstagramPreset = {
+  id: string;
+  name: string;
+  updatedAt: number;
+  settings: InstagramSettings;
+};
 
 const instagramThemes: Record<InstagramThemeKey, {
   label: string;
@@ -126,9 +144,19 @@ const defaultSettings: InstagramSettings = {
       visible: true,
     },
   ],
+  runtimeCommentUsername: "guest_user",
+  runtimeCommentDisplayName: "ゲスト",
+  runtimeCommentAvatarLabel: "ゲ",
+  runtimeCommentAvatarImage: null,
   postTime: "22:18",
   storyImage: null,
+  storyImages: [],
   storyText: "今日はありがとう。",
+  storyShowText: true,
+  storyTextX: 50,
+  storyTextY: 50,
+  storyTextSize: 24,
+  storyDurationSeconds: 5,
   storyReplyPlaceholder: "メッセージを送信",
   storyLiked: false,
   storyMessages: [],
@@ -151,12 +179,45 @@ const readStoredSettings = (): InstagramSettings => {
     if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) {
       merged.postImages = [merged.postImage];
     }
+    if ((!merged.storyImages || merged.storyImages.length === 0) && merged.storyImage) {
+      merged.storyImages = [merged.storyImage];
+    }
+    if (!Array.isArray(merged.storyImages)) merged.storyImages = [];
+    if (typeof merged.storyShowText !== "boolean") merged.storyShowText = defaultSettings.storyShowText;
+    if (!Number.isFinite(Number(merged.storyTextX))) merged.storyTextX = defaultSettings.storyTextX;
+    if (!Number.isFinite(Number(merged.storyTextY))) merged.storyTextY = defaultSettings.storyTextY;
+    if (!Number.isFinite(Number(merged.storyTextSize))) merged.storyTextSize = defaultSettings.storyTextSize;
+    if (!Number.isFinite(Number(merged.storyDurationSeconds)) || Number(merged.storyDurationSeconds) <= 0) merged.storyDurationSeconds = defaultSettings.storyDurationSeconds;
     if (!Array.isArray(merged.storyMessages)) {
       merged.storyMessages = [];
     }
+    if (typeof merged.runtimeCommentUsername !== "string") merged.runtimeCommentUsername = defaultSettings.runtimeCommentUsername;
+    if (typeof merged.runtimeCommentDisplayName !== "string") merged.runtimeCommentDisplayName = defaultSettings.runtimeCommentDisplayName;
+    if (typeof merged.runtimeCommentAvatarLabel !== "string") merged.runtimeCommentAvatarLabel = defaultSettings.runtimeCommentAvatarLabel;
+    if (typeof merged.runtimeCommentAvatarImage !== "string") merged.runtimeCommentAvatarImage = null;
     return merged;
   } catch {
     return defaultSettings;
+  }
+};
+
+const readSavedInstagramPresets = (): SavedInstagramPreset[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SAVED_INSTAGRAM_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item, index) => ({
+        id: String(item?.id ?? `instagram-preset-${index}`),
+        name: String(item?.name ?? `保存Instagram ${index + 1}`),
+        updatedAt: Number.isFinite(Number(item?.updatedAt)) ? Number(item.updatedAt) : Date.now(),
+        settings: { ...defaultSettings, ...(item?.settings || {}) } as InstagramSettings,
+      }))
+      .filter((item) => item.name.trim());
+  } catch {
+    return [];
   }
 };
 
@@ -345,10 +406,10 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
     if (!text) return;
     const nextComment: InstagramComment = {
       id: `runtime-comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      username: "guest_user",
-      displayName: "ゲスト",
-      avatarLabel: "ゲ",
-      avatarImage: null,
+      username: settings.runtimeCommentUsername.trim() || "guest_user",
+      displayName: settings.runtimeCommentDisplayName.trim(),
+      avatarLabel: settings.runtimeCommentAvatarLabel.trim().slice(0, 2) || "ゲ",
+      avatarImage: settings.runtimeCommentAvatarImage,
       text,
       likeCount: "0",
       visible: true,
@@ -501,7 +562,7 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
             </div>
 
             <div className={cn("flex shrink-0 items-center gap-2 border-t px-3 py-3", theme.border)}>
-              <Avatar label="ゲ" image={null} size="h-8 w-8" themeKey={settings.themeKey} />
+              <Avatar label={settings.runtimeCommentAvatarLabel} image={settings.runtimeCommentAvatarImage} size="h-8 w-8" themeKey={settings.themeKey} />
               <input
                 value={commentDraft}
                 onChange={(e) => setCommentDraft(e.target.value)}
@@ -520,9 +581,66 @@ function InstagramPostPreview({ settings, setSettings }: { settings: InstagramSe
 
 function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>> }) {
   const [messageDraft, setMessageDraft] = useState("");
-  const storyStyle = settings.storyImage
-    ? { backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,.28)), url(${settings.storyImage})`, backgroundSize: "cover", backgroundPosition: "center" }
+  const [activeStoryIndex, setActiveStoryIndex] = useState(0);
+  const [storyProgress, setStoryProgress] = useState(0);
+  const animationFrameRef = useRef<number | null>(null);
+  const startedAtRef = useRef<number>(0);
+
+  const storyImages = settings.storyImages?.length ? settings.storyImages : settings.storyImage ? [settings.storyImage] : [];
+  const storyCount = Math.max(1, storyImages.length);
+  const safeStoryIndex = storyImages.length ? Math.min(activeStoryIndex, storyImages.length - 1) : 0;
+  const currentStoryImage = storyImages[safeStoryIndex] || null;
+  const durationMs = Math.max(1, Number(settings.storyDurationSeconds) || 5) * 1000;
+  const showText = settings.storyShowText !== false && settings.storyText.trim().length > 0;
+  const textX = Math.max(0, Math.min(100, Number(settings.storyTextX) || 50));
+  const textY = Math.max(0, Math.min(100, Number(settings.storyTextY) || 50));
+  const textSize = Math.max(12, Math.min(72, Number(settings.storyTextSize) || 24));
+
+  const storyStyle = currentStoryImage
+    ? { backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,.18), rgba(0,0,0,.28)), url(${currentStoryImage})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { background: "linear-gradient(135deg, #f97316, #db2777, #7c3aed)" };
+
+  useEffect(() => {
+    setActiveStoryIndex((prev) => Math.min(prev, Math.max(0, storyImages.length - 1)));
+  }, [storyImages.length]);
+
+  useEffect(() => {
+    setStoryProgress(0);
+    startedAtRef.current = performance.now();
+
+    const tick = (now: number) => {
+      const elapsed = now - startedAtRef.current;
+      const nextProgress = Math.min(100, (elapsed / durationMs) * 100);
+      setStoryProgress(nextProgress);
+
+      if (nextProgress >= 100) {
+        if (storyImages.length > 1) {
+          setActiveStoryIndex((prev) => (prev + 1) % storyImages.length);
+        } else {
+          startedAtRef.current = now;
+          setStoryProgress(0);
+        }
+        return;
+      }
+
+      animationFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [safeStoryIndex, durationMs, storyImages.length]);
+
+  const goPrevStory = () => {
+    setActiveStoryIndex((prev) => (prev - 1 + storyCount) % storyCount);
+  };
+
+  const goNextStory = () => {
+    setActiveStoryIndex((prev) => (prev + 1) % storyCount);
+  };
 
   const toggleStoryLike = () => {
     setSettings((prev) => ({ ...prev, storyLiked: !prev.storyLiked }));
@@ -540,10 +658,16 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-black text-white" style={storyStyle}>
       <StatusBar time={settings.deviceTime} className="text-white" />
-      <div className="px-3 pt-2">
+      <div className="relative z-10 px-3 pt-2">
         <div className="flex gap-1">
-          <div className="h-0.5 flex-1 rounded-full bg-white" />
-          <div className="h-0.5 flex-1 rounded-full bg-white/40" />
+          {Array.from({ length: storyCount }).map((_, index) => {
+            const width = index < safeStoryIndex ? 100 : index === safeStoryIndex ? storyProgress : 0;
+            return (
+              <div key={index} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/35">
+                <div className="h-full rounded-full bg-white" style={{ width: `${width}%` }} />
+              </div>
+            );
+          })}
         </div>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -554,19 +678,46 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
           <X className="h-5 w-5" />
         </div>
       </div>
-      <div className="flex flex-1 items-center justify-center px-6 text-center">
-        <div className="max-w-[86%] rounded-3xl bg-white/90 px-5 py-4 text-2xl font-bold leading-relaxed text-black shadow-2xl">
-          {settings.storyText || "ストーリーテキスト"}
-        </div>
+
+      {storyCount > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={goPrevStory}
+            className="absolute left-0 top-20 z-10 h-[calc(100%-170px)] w-1/3"
+            aria-label="前のストーリー"
+          />
+          <button
+            type="button"
+            onClick={goNextStory}
+            className="absolute right-0 top-20 z-10 h-[calc(100%-170px)] w-1/3"
+            aria-label="次のストーリー"
+          />
+          <div className="absolute right-3 top-16 z-10 rounded-full bg-black/45 px-2 py-1 text-xs font-semibold text-white backdrop-blur">
+            {safeStoryIndex + 1}/{storyCount}
+          </div>
+        </>
+      )}
+
+      <div className="relative flex-1">
+        {showText && (
+          <div
+            className="absolute z-10 max-w-[86%] -translate-x-1/2 -translate-y-1/2 whitespace-pre-wrap rounded-3xl bg-white/90 px-5 py-4 text-center font-bold leading-relaxed text-black shadow-2xl"
+            style={{ left: `${textX}%`, top: `${textY}%`, fontSize: `${textSize}px` }}
+          >
+            {settings.storyText}
+          </div>
+        )}
       </div>
+
       {latestMessage && (
-        <div className="mx-4 mb-3 flex justify-end">
+        <div className="relative z-20 mx-4 mb-3 flex justify-end">
           <div className="max-w-[78%] rounded-2xl bg-white/90 px-3 py-2 text-xs font-medium text-black shadow-lg">
             送信済み：{latestMessage}
           </div>
         </div>
       )}
-      <div className="flex items-center gap-3 px-4 pb-5">
+      <div className="relative z-20 flex items-center gap-3 px-4 pb-5">
         <input
           value={messageDraft}
           onChange={(e) => setMessageDraft(e.target.value)}
@@ -590,9 +741,12 @@ export default function InstagramMockCreator() {
   const [settings, setSettings] = useState<InstagramSettings>(defaultSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>("create");
+  const [savedPresets, setSavedPresets] = useState<SavedInstagramPreset[]>([]);
+  const [saveName, setSaveName] = useState("Instagram撮影セット");
 
   useEffect(() => {
     setSettings(readStoredSettings());
+    setSavedPresets(readSavedInstagramPresets());
   }, []);
 
   useEffect(() => {
@@ -607,7 +761,7 @@ export default function InstagramMockCreator() {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>, key: "avatarImage" | "postImage" | "storyImage") => {
+  const handleImageUpload = (event: ChangeEvent<HTMLInputElement>, key: "avatarImage" | "postImage" | "storyImage" | "runtimeCommentAvatarImage") => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -615,6 +769,10 @@ export default function InstagramMockCreator() {
       const result = String(reader.result);
       if (key === "postImage") {
         setSettings((prev) => ({ ...prev, postImage: result, postImages: [result] }));
+        return;
+      }
+      if (key === "storyImage") {
+        setSettings((prev) => ({ ...prev, storyImage: result, storyImages: [result] }));
         return;
       }
       update(key, result as InstagramSettings[typeof key]);
@@ -641,6 +799,25 @@ export default function InstagramMockCreator() {
     event.target.value = "";
   };
 
+
+  const handleStoryImagesUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []).filter((file) => file.type.startsWith("image/"));
+    if (files.length === 0) return;
+
+    Promise.all(files.map((file) => new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsDataURL(file);
+    }))).then((images) => {
+      setSettings((prev) => ({
+        ...prev,
+        storyImage: images[0] || prev.storyImage,
+        storyImages: images,
+      }));
+    });
+    event.target.value = "";
+  };
+
   const updateComment = <K extends keyof InstagramComment>(id: string, key: K, value: InstagramComment[K]) => {
     setSettings((prev) => ({
       ...prev,
@@ -651,10 +828,10 @@ export default function InstagramMockCreator() {
   const addComment = () => {
     const nextComment: InstagramComment = {
       id: `comment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      username: "guest_user",
-      displayName: "ゲスト",
-      avatarLabel: "ゲ",
-      avatarImage: null,
+      username: settings.runtimeCommentUsername.trim() || "guest_user",
+      displayName: settings.runtimeCommentDisplayName.trim(),
+      avatarLabel: settings.runtimeCommentAvatarLabel.trim().slice(0, 2) || "ゲ",
+      avatarImage: settings.runtimeCommentAvatarImage,
       text: "コメントを入力",
       likeCount: "0",
       visible: true,
@@ -673,6 +850,46 @@ export default function InstagramMockCreator() {
     reader.onload = () => updateComment(id, "avatarImage", String(reader.result));
     reader.readAsDataURL(file);
     event.target.value = "";
+  };
+
+  const persistSavedPresets = (items: SavedInstagramPreset[]) => {
+    setSavedPresets(items);
+    try {
+      window.localStorage.setItem(SAVED_INSTAGRAM_STORAGE_KEY, JSON.stringify(items));
+    } catch {}
+  };
+
+  const saveInstagramPresetAsNew = () => {
+    const name = saveName.trim();
+    if (!name) return;
+    const item: SavedInstagramPreset = {
+      id: `instagram-saved-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      name,
+      updatedAt: Date.now(),
+      settings,
+    };
+    persistSavedPresets([item, ...savedPresets]);
+  };
+
+  const overwriteInstagramPreset = (id: string) => {
+    persistSavedPresets(savedPresets.map((item) => item.id === id ? { ...item, updatedAt: Date.now(), settings } : item));
+  };
+
+  const loadInstagramPreset = (id: string) => {
+    const item = savedPresets.find((preset) => preset.id === id);
+    if (!item) return;
+    setSettings({ ...defaultSettings, ...item.settings });
+    setSettingsOpen(false);
+  };
+
+  const deleteInstagramPreset = (id: string) => {
+    persistSavedPresets(savedPresets.filter((item) => item.id !== id));
+  };
+
+  const duplicateInstagramPreset = (id: string) => {
+    const item = savedPresets.find((preset) => preset.id === id);
+    if (!item) return;
+    persistSavedPresets([{ ...item, id: `instagram-saved-${Date.now()}-${Math.random().toString(16).slice(2)}`, name: `${item.name} コピー`, updatedAt: Date.now() }, ...savedPresets]);
   };
 
   const enterFullscreenIfNeeded = async (enabled: boolean) => {
@@ -730,9 +947,10 @@ export default function InstagramMockCreator() {
               <div className="text-sm font-semibold text-black/75">Instagram風 画面設定</div>
             </div>
 
-            <div className="mb-4 grid shrink-0 grid-cols-4 rounded-3xl bg-black/[0.06] p-1">
+            <div className="mb-4 grid shrink-0 grid-cols-5 rounded-3xl bg-black/[0.06] p-1">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "comments"} onClick={() => setActiveTab("comments")}>コメント</TabButton>
+              <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
               <TabButton active={activeTab === "modes"} onClick={() => setActiveTab("modes")}>モード</TabButton>
             </div>
@@ -765,8 +983,20 @@ export default function InstagramMockCreator() {
                     </SectionCard>
                   ) : (
                     <SectionCard icon={ImageIcon} title="ストーリー内容">
-                      <div className="flex items-center gap-3"><FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "storyImage")}>背景画像</FileButton><Button variant="outline" onClick={() => update("storyImage", null)}>解除</Button></div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "storyImage")}>背景画像</FileButton>
+                        <MultiFileButton accept="image/*" onFiles={handleStoryImagesUpload}>複数画像</MultiFileButton>
+                        <Button variant="outline" onClick={() => setSettings((prev) => ({ ...prev, storyImage: null, storyImages: [] }))}>解除</Button>
+                      </div>
+                      <div className="text-xs text-black/50">複数画像を選ぶと、枚数に合わせて上部バーが増減し、自動で次の画像へ進みます。</div>
+                      <div className="space-y-2"><Label>バーがいっぱいになる秒数</Label><Input type="number" min="1" step="0.5" value={settings.storyDurationSeconds} onChange={(e) => update("storyDurationSeconds", Number(e.target.value) || 1)} /></div>
+                      <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">テキストを表示する</div><div className="text-xs text-black/50">OFFにすると画像だけのストーリーになります</div></div><Switch checked={settings.storyShowText !== false} onCheckedChange={(v) => update("storyShowText", v)} /></div>
                       <div className="space-y-2"><Label>テキスト</Label><Textarea value={settings.storyText} onChange={(e) => update("storyText", e.target.value)} /></div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2"><Label>横位置 %</Label><Input type="number" min="0" max="100" value={settings.storyTextX} onChange={(e) => update("storyTextX", Number(e.target.value) || 0)} /></div>
+                        <div className="space-y-2"><Label>縦位置 %</Label><Input type="number" min="0" max="100" value={settings.storyTextY} onChange={(e) => update("storyTextY", Number(e.target.value) || 0)} /></div>
+                        <div className="space-y-2"><Label>文字サイズ</Label><Input type="number" min="12" max="72" value={settings.storyTextSize} onChange={(e) => update("storyTextSize", Number(e.target.value) || 12)} /></div>
+                      </div>
                       <div className="space-y-2"><Label>返信欄</Label><Input value={settings.storyReplyPlaceholder} onChange={(e) => update("storyReplyPlaceholder", e.target.value)} /></div>
                     </SectionCard>
                   )}
@@ -779,7 +1009,22 @@ export default function InstagramMockCreator() {
                     <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
                       投稿画面のコメントアイコンを押すと、画面下部にコメント欄が表示されます。コメント数の表示は「作成」タブで変更できます。
                     </div>
-                    <Button className="w-full" onClick={addComment}>コメントを追加</Button>
+                    <div className="space-y-3 rounded-2xl border border-black/10 bg-white p-3">
+                      <div className="text-sm font-semibold text-black/80">撮影中に送信するコメントのユーザー</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2"><Label>ユーザー名</Label><Input value={settings.runtimeCommentUsername} onChange={(e) => update("runtimeCommentUsername", e.target.value)} /></div>
+                        <div className="space-y-2"><Label>表示名</Label><Input value={settings.runtimeCommentDisplayName} onChange={(e) => update("runtimeCommentDisplayName", e.target.value)} /></div>
+                      </div>
+                      <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+                        <div className="space-y-2"><Label>アイコン文字</Label><Input value={settings.runtimeCommentAvatarLabel} onChange={(e) => update("runtimeCommentAvatarLabel", e.target.value.slice(0, 2))} /></div>
+                        <Avatar label={settings.runtimeCommentAvatarLabel} image={settings.runtimeCommentAvatarImage} size="h-11 w-11" themeKey={settings.themeKey} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <FileButton accept="image/*" onFile={(e) => handleImageUpload(e, "runtimeCommentAvatarImage")}>送信者アイコン画像</FileButton>
+                        <Button variant="outline" onClick={() => update("runtimeCommentAvatarImage", null)}>解除</Button>
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={addComment}>表示用コメントを追加</Button>
                   </SectionCard>
 
                   {(settings.comments || []).length === 0 ? (
@@ -813,6 +1058,44 @@ export default function InstagramMockCreator() {
                       </SectionCard>
                     ))
                   )}
+                </div>
+              )}
+
+
+              {activeTab === "saved" && (
+                <div className="space-y-4">
+                  <SectionCard icon={MessageCircle} title="Instagram画面を保存">
+                    <div className="rounded-2xl bg-black/[0.04] p-3 text-xs leading-relaxed text-black/55">
+                      投稿・ストーリー・コメント・画像・テーマを名前付きで保存できます。撮影パターンを複数作る時に使います。
+                    </div>
+                    <div className="space-y-2"><Label>保存名</Label><Input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="例：美咲_投稿画面_夜" /></div>
+                    <Button className="w-full" onClick={saveInstagramPresetAsNew}>新規保存</Button>
+                  </SectionCard>
+
+                  <SectionCard icon={MessageCircle} title={`保存一覧 (${savedPresets.length})`}>
+                    {savedPresets.length === 0 ? (
+                      <div className="py-6 text-center text-sm text-black/45">保存済みのInstagram画面はありません</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {savedPresets.map((item) => (
+                          <div key={item.id} className="rounded-2xl border border-black/10 bg-[#fafafa] p-3">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-black/80">{item.name}</div>
+                                <div className="mt-1 text-xs text-black/45">{new Date(item.updatedAt).toLocaleString("ja-JP")}</div>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button onClick={() => loadInstagramPreset(item.id)} className="justify-center">読み込み</Button>
+                              <Button onClick={() => overwriteInstagramPreset(item.id)} variant="outline" className="justify-center">上書き</Button>
+                              <Button onClick={() => duplicateInstagramPreset(item.id)} variant="outline" className="justify-center">複製</Button>
+                              <Button onClick={() => deleteInstagramPreset(item.id)} variant="outline" className="justify-center text-red-600">削除</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </SectionCard>
                 </div>
               )}
 
