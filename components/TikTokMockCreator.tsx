@@ -694,19 +694,13 @@ export default function TikTokMockCreator() {
   );
 
   return (
-    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50" : "")}> 
-      <div className={cn("relative mx-auto flex min-h-screen items-center justify-center", settings.fullScreenMode ? "h-screen w-screen p-0" : "h-screen w-screen p-0")}> 
-        {settings.deviceFrameMode ? (
-          <div className={cn("mx-auto flex min-h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
-            <div className="relative flex-1 overflow-hidden p-4">
-              <div className="relative h-full min-h-[calc(100dvh-32px)] w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
-                {screen}
-              </div>
-            </div>
+    <main className={cn("min-h-screen overflow-hidden bg-black", settings.fullScreenMode ? "fixed inset-0 z-50" : "")}>
+      <div className={cn("relative flex h-[100dvh] w-full flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "mx-auto max-w-md")}>
+        <div className={cn("relative flex-1 overflow-hidden", settings.deviceFrameMode ? "p-4" : "p-0")}>
+          <div className={cn("relative h-full min-h-0 w-full overflow-hidden bg-black text-white", settings.deviceFrameMode && "rounded-[32px] border border-white/10 shadow-2xl")}>
+            {screen}
           </div>
-        ) : (
-          <div className="relative h-screen w-screen overflow-hidden bg-black">{screen}</div>
-        )}
+        </div>
 
         {settings.showSettingsButton && (
           <button type="button" onClick={() => setSettingsOpen(true)} className="fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-2xl ring-1 ring-white/20" aria-label="設定を開く">

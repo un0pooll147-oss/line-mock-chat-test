@@ -583,7 +583,7 @@ function InstagramPostPreview({ settings, setSettings, onOpenSettings }: { setti
   );
 }
 
-function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>> }) {
+function InstagramStoryPreview({ settings, setSettings, onOpenSettings }: { settings: InstagramSettings; setSettings: React.Dispatch<React.SetStateAction<InstagramSettings>>; onOpenSettings: () => void }) {
   const [messageDraft, setMessageDraft] = useState("");
   const [activeStoryIndex, setActiveStoryIndex] = useState(0);
   const [storyProgress, setStoryProgress] = useState(0);
@@ -694,7 +694,14 @@ function InstagramStoryPreview({ settings, setSettings }: { settings: InstagramS
             <div className="text-sm font-semibold drop-shadow">{settings.username}</div>
             <div className="text-xs text-white/75">今</div>
           </div>
-          <X className="h-5 w-5" />
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-white backdrop-blur active:scale-95"
+            aria-label="設定を開く"
+          >
+            <MoreHorizontal className="h-6 w-6" />
+          </button>
         </div>
       </div>
 
@@ -935,7 +942,7 @@ export default function InstagramMockCreator() {
 
   const screen = (
     <div className="h-full w-full overflow-hidden rounded-[inherit] bg-white">
-      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} />}
+      {settings.screenType === "post" ? <InstagramPostPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} /> : <InstagramStoryPreview settings={settings} setSettings={setSettings} onOpenSettings={() => setSettingsOpen(true)} />}
     </div>
   );
 
