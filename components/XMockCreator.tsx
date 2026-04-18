@@ -68,8 +68,12 @@ type ReplyItem = {
   avatarImage: string | null;
   text: string;
   time: string;
-  liked: boolean;
+  replyCount: number;
+  repostCount: number;
   likeCount: number;
+  viewCount: string;
+  liked: boolean;
+  reposted: boolean;
 };
 
 type SavedPreset = {
@@ -163,8 +167,8 @@ const initialSettings: XSettings = {
   replyInput: "これ、続きが気になる。",
   replyTime: "今",
   replies: [
-    { id: "r1", username: "ren_film", displayName: "Ren", avatarLabel: "R", avatarImage: null, text: "この一文だけで物語が始まりそう。", time: "3分", liked: false, likeCount: 4 },
-    { id: "r2", username: "mika_story", displayName: "Mika", avatarLabel: "M", avatarImage: null, text: "撮影用ならかなり自然に見えるね。", time: "12分", liked: false, likeCount: 9 },
+    { id: "r1", username: "ren_film", displayName: "Ren", avatarLabel: "R", avatarImage: null, text: "この一文だけで物語が始まりそう。", time: "3分", replyCount: 1, repostCount: 2, likeCount: 4, viewCount: "128", liked: false, reposted: false },
+    { id: "r2", username: "mika_story", displayName: "Mika", avatarLabel: "M", avatarImage: null, text: "撮影用ならかなり自然に見えるね。", time: "12分", replyCount: 0, repostCount: 1, likeCount: 9, viewCount: "342", liked: false, reposted: false },
   ],
   notificationTitle: "新しい通知",
   notificationText: "あなたの投稿に新しい返信がありました",
@@ -246,6 +250,15 @@ function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSett
   if (typeof (merged as any).profileFollowed !== "boolean") merged.profileFollowed = false;
   if (!(merged as any).replyTime) merged.replyTime = "今";
   if (typeof (merged as any).showScreenLabel !== "boolean") merged.showScreenLabel = true;
+  merged.replies = (merged.replies || []).map((reply: any) => ({
+    ...reply,
+    replyCount: typeof reply.replyCount === "number" ? reply.replyCount : 0,
+    repostCount: typeof reply.repostCount === "number" ? reply.repostCount : 0,
+    likeCount: typeof reply.likeCount === "number" ? reply.likeCount : 0,
+    viewCount: typeof reply.viewCount === "string" ? reply.viewCount : "0",
+    liked: typeof reply.liked === "boolean" ? reply.liked : false,
+    reposted: typeof reply.reposted === "boolean" ? reply.reposted : false,
+  }));
   return merged;
 }
 
@@ -463,8 +476,12 @@ export default function XMockCreator() {
       avatarImage: settings.replyAvatarImage,
       text,
       time: settings.replyTime || "今",
-      liked: false,
+      replyCount: 0,
+      repostCount: 0,
       likeCount: 0,
+      viewCount: "0",
+      liked: false,
+      reposted: false,
     };
     update("replies", [reply, ...settings.replies]);
     update("replyInput", "");
@@ -604,7 +621,14 @@ export default function XMockCreator() {
         </div>
         <div className="absolute right-4 flex items-center gap-3">
           <Search className="h-5 w-5" />
-          <MoreHorizontal className="h-5 w-5" />
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            className="grid h-8 w-8 place-items-center rounded-full transition active:bg-current/10"
+            aria-label="設定を開く"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </>
@@ -667,10 +691,11 @@ export default function XMockCreator() {
                 <button type="button" onClick={() => deleteReply(reply.id)} className="ml-auto opacity-50 hover:text-red-500 hover:opacity-100"><Trash2 className="h-4 w-4" /></button>
               </div>
               <div className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{reply.text}</div>
-              <div className="mt-2 flex items-center gap-8 text-xs">
-                <button type="button" className={cls(theme.sub, "flex items-center gap-1")}><MessageCircle className="h-4 w-4" />0</button>
-                <button type="button" className={cls(theme.sub, "flex items-center gap-1")}><Repeat2 className="h-4 w-4" />0</button>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <button type="button" className={cls(theme.sub, "flex items-center gap-1")}><MessageCircle className="h-4 w-4" />{reply.replyCount}</button>
+                <button type="button" onClick={() => updateReply(reply.id, "reposted", !reply.reposted)} className={cls("flex items-center gap-1", reply.reposted ? "text-green-500" : theme.sub)}><Repeat2 className="h-4 w-4" />{reply.repostCount + (reply.reposted ? 1 : 0)}</button>
                 <button type="button" onClick={() => toggleReplyLike(reply.id)} className={cls("flex items-center gap-1", reply.liked ? "text-pink-500" : theme.sub)}><Heart className={cls("h-4 w-4", reply.liked ? "fill-current" : "")} />{reply.likeCount}</button>
+                <span className={cls(theme.sub, "flex items-center gap-1")}><BarChart3 className="h-4 w-4" />{reply.viewCount}</span>
               </div>
             </div>
           </div>
@@ -919,11 +944,17 @@ export default function XMockCreator() {
                           <Field label="ユーザー名" value={reply.username} onChange={(v) => updateReply(reply.id, "username", v)} />
                           <Field label="アイコン文字" value={reply.avatarLabel} onChange={(v) => updateReply(reply.id, "avatarLabel", v.slice(0, 2))} />
                           <Field label="返信時間" value={reply.time} onChange={(v) => updateReply(reply.id, "time", v)} />
+                          <Field label="返信数" type="number" value={String(reply.replyCount)} onChange={(v) => updateReply(reply.id, "replyCount", Number(v) || 0)} />
+                          <Field label="リポスト数" type="number" value={String(reply.repostCount)} onChange={(v) => updateReply(reply.id, "repostCount", Number(v) || 0)} />
                           <Field label="いいね数" type="number" value={String(reply.likeCount)} onChange={(v) => updateReply(reply.id, "likeCount", Number(v) || 0)} />
+                          <Field label="表示数" value={reply.viewCount} onChange={(v) => updateReply(reply.id, "viewCount", v)} />
                         </div>
                         <label className="grid min-w-0 gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => updateReply(reply.id, "avatarImage", url))} className="w-full min-w-0 text-xs" /></label>
                         <TextArea label="返信本文" value={reply.text} onChange={(v) => updateReply(reply.id, "text", v)} rows={3} />
-                        <div className="flex gap-2"><Button variant="outline" onClick={() => toggleReplyLike(reply.id)}>いいねON/OFF</Button></div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant={reply.liked ? "primary" : "outline"} onClick={() => toggleReplyLike(reply.id)}>いいねON/OFF</Button>
+                          <Button variant={reply.reposted ? "primary" : "outline"} onClick={() => updateReply(reply.id, "reposted", !reply.reposted)}>リポストON/OFF</Button>
+                        </div>
                       </div>
                     ))}
                   </SectionCard>
