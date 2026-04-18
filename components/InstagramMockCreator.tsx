@@ -23,7 +23,7 @@ import {
 
 type InstagramScreenType = "post" | "story";
 type SettingsTab = "create" | "comments" | "saved" | "screen" | "modes";
-type InstagramThemeKey = "instagram" | "dark" | "soft" | "red" | "blue" | "yellow" | "purple";
+type InstagramThemeKey = "instagram" | "dark";
 
 type InstagramComment = {
   id: string;
@@ -97,13 +97,8 @@ const instagramThemes: Record<InstagramThemeKey, {
   avatar: string;
   emptyImage: string;
 }> = {
-  instagram: { label: "Instagram風", root: "bg-white", surface: "bg-white", surfaceAlt: "bg-white", text: "text-black", muted: "text-black/55", border: "border-black/10", icon: "text-black", avatar: "bg-gradient-to-br from-pink-500 via-orange-400 to-yellow-300", emptyImage: "bg-gradient-to-br from-neutral-100 to-neutral-300 text-black/45" },
-  dark: { label: "ダークモード", root: "bg-neutral-950", surface: "bg-neutral-950", surfaceAlt: "bg-neutral-900", text: "text-white", muted: "text-white/55", border: "border-white/10", icon: "text-white", avatar: "bg-gradient-to-br from-neutral-700 via-neutral-500 to-neutral-300", emptyImage: "bg-gradient-to-br from-neutral-900 to-neutral-700 text-white/45" },
-  soft: { label: "ソフト", root: "bg-[#fffaf7]", surface: "bg-[#fffaf7]", surfaceAlt: "bg-[#f3ece7]", text: "text-stone-900", muted: "text-stone-500", border: "border-stone-200", icon: "text-stone-900", avatar: "bg-gradient-to-br from-rose-300 via-violet-300 to-sky-300", emptyImage: "bg-gradient-to-br from-rose-50 via-violet-50 to-sky-100 text-stone-400" },
-  red: { label: "赤ベース", root: "bg-red-50", surface: "bg-white", surfaceAlt: "bg-red-50", text: "text-red-950", muted: "text-red-950/55", border: "border-red-200", icon: "text-red-950", avatar: "bg-gradient-to-br from-red-500 via-rose-500 to-orange-300", emptyImage: "bg-gradient-to-br from-red-50 to-rose-200 text-red-900/45" },
-  blue: { label: "青ベース", root: "bg-blue-50", surface: "bg-white", surfaceAlt: "bg-blue-50", text: "text-blue-950", muted: "text-blue-950/55", border: "border-blue-200", icon: "text-blue-950", avatar: "bg-gradient-to-br from-blue-500 via-cyan-500 to-sky-300", emptyImage: "bg-gradient-to-br from-blue-50 to-cyan-200 text-blue-900/45" },
-  yellow: { label: "黄ベース", root: "bg-yellow-50", surface: "bg-white", surfaceAlt: "bg-yellow-50", text: "text-yellow-950", muted: "text-yellow-950/55", border: "border-yellow-200", icon: "text-yellow-950", avatar: "bg-gradient-to-br from-yellow-400 via-amber-400 to-orange-300", emptyImage: "bg-gradient-to-br from-yellow-50 to-amber-200 text-yellow-900/45" },
-  purple: { label: "紫ベース", root: "bg-purple-50", surface: "bg-white", surfaceAlt: "bg-purple-50", text: "text-purple-950", muted: "text-purple-950/55", border: "border-purple-200", icon: "text-purple-950", avatar: "bg-gradient-to-br from-purple-500 via-fuchsia-500 to-pink-300", emptyImage: "bg-gradient-to-br from-purple-50 to-fuchsia-200 text-purple-900/45" },
+  instagram: { label: "基本", root: "bg-white", surface: "bg-white", surfaceAlt: "bg-white", text: "text-black", muted: "text-black/55", border: "border-black/10", icon: "text-black", avatar: "bg-gradient-to-br from-pink-500 via-orange-400 to-yellow-300", emptyImage: "bg-gradient-to-br from-neutral-100 to-neutral-300 text-black/45" },
+  dark: { label: "ダークテーマ", root: "bg-neutral-950", surface: "bg-neutral-950", surfaceAlt: "bg-neutral-900", text: "text-white", muted: "text-white/55", border: "border-white/10", icon: "text-white", avatar: "bg-gradient-to-br from-neutral-700 via-neutral-500 to-neutral-300", emptyImage: "bg-gradient-to-br from-neutral-900 to-neutral-700 text-white/45" }
 };
 
 
@@ -178,6 +173,7 @@ const readStoredSettings = (): InstagramSettings => {
     if (!raw) return defaultSettings;
     const parsed = JSON.parse(raw);
     const merged = { ...defaultSettings, ...parsed } as InstagramSettings;
+    if (merged.themeKey !== "dark") merged.themeKey = "instagram";
     if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) {
       merged.postImages = [merged.postImage];
     }
@@ -911,7 +907,7 @@ export default function InstagramMockCreator() {
   const loadInstagramPreset = (id: string) => {
     const item = savedPresets.find((preset) => preset.id === id);
     if (!item) return;
-    setSettings({ ...defaultSettings, ...item.settings });
+    setSettings({ ...defaultSettings, ...item.settings, themeKey: item.settings.themeKey === "dark" ? "dark" : "instagram" });
     setSettingsOpen(false);
   };
 

@@ -23,9 +23,9 @@ import {
   X as XIcon,
 } from "lucide-react";
 
-type XScreenType = "detail" | "timeline" | "notifications";
-type XThemeKey = "light" | "dark" | "blue" | "red" | "purple" | "soft";
-type SettingsTab = "create" | "replies" | "timeline" | "notifications" | "saved" | "screen" | "modes";
+type XScreenType = "timeline" | "notifications" | "profile";
+type XThemeKey = "light" | "dark";
+type SettingsTab = "create" | "replies" | "timeline" | "profile" | "notifications" | "saved" | "screen" | "modes";
 
 
 type TimelinePost = {
@@ -111,6 +111,13 @@ type XSettings = {
   notificationText: string;
   timelinePosts: TimelinePost[];
   notifications: NotificationItem[];
+  profileBio: string;
+  profileLocation: string;
+  profileJoined: string;
+  profileFollowingCount: string;
+  profileFollowerCount: string;
+  profilePostCount: string;
+  profileCoverImage: string | null;
   deviceTime: string;
   showStatusBar: boolean;
   fullScreenMode: boolean;
@@ -123,7 +130,7 @@ const STORAGE_KEY = "x-mock-settings-v1";
 const SAVED_STORAGE_KEY = "x-mock-saved-presets-v1";
 
 const initialSettings: XSettings = {
-  screenType: "detail",
+  screenType: "timeline",
   themeKey: "light",
   appName: "Postly",
   displayName: "青井 映",
@@ -164,6 +171,13 @@ const initialSettings: XSettings = {
     { id: "n2", kind: "repost", displayName: "news mock", username: "news_mock", avatarLabel: "N", avatarImage: null, title: "リポストされました", text: "あなたの投稿がリポストされました", time: "12分" },
     { id: "n3", kind: "reply", displayName: "Guest", username: "guest_user", avatarLabel: "G", avatarImage: null, title: "新しい返信", text: "これ、続きが気になる。", time: "今" },
   ],
+  profileBio: "映画・撮影用の架空SNSアカウント。これは実在サービスではありません。",
+  profileLocation: "Tokyo, Japan",
+  profileJoined: "2026年4月から利用しています",
+  profileFollowingCount: "128",
+  profileFollowerCount: "3,482",
+  profilePostCount: "248",
+  profileCoverImage: null,
   deviceTime: "21:12",
   showStatusBar: true,
   fullScreenMode: false,
@@ -210,60 +224,16 @@ const themes: Record<XThemeKey, {
     accent: "text-sky-400",
     soft: "bg-zinc-900",
     input: "bg-zinc-950 border-zinc-800 text-zinc-50 placeholder:text-zinc-500",
-  },
-  blue: {
-    label: "青ベース",
-    page: "bg-blue-50",
-    phone: "bg-white",
-    panel: "bg-white",
-    text: "text-slate-950",
-    sub: "text-slate-500",
-    border: "border-blue-100",
-    button: "bg-blue-500 text-white",
-    accent: "text-blue-500",
-    soft: "bg-blue-50",
-    input: "bg-white border-blue-100 text-slate-950 placeholder:text-slate-400",
-  },
-  red: {
-    label: "赤ベース",
-    page: "bg-red-50",
-    phone: "bg-white",
-    panel: "bg-white",
-    text: "text-slate-950",
-    sub: "text-slate-500",
-    border: "border-red-100",
-    button: "bg-red-500 text-white",
-    accent: "text-red-500",
-    soft: "bg-red-50",
-    input: "bg-white border-red-100 text-slate-950 placeholder:text-slate-400",
-  },
-  purple: {
-    label: "紫ベース",
-    page: "bg-purple-50",
-    phone: "bg-white",
-    panel: "bg-white",
-    text: "text-slate-950",
-    sub: "text-slate-500",
-    border: "border-purple-100",
-    button: "bg-purple-500 text-white",
-    accent: "text-purple-500",
-    soft: "bg-purple-50",
-    input: "bg-white border-purple-100 text-slate-950 placeholder:text-slate-400",
-  },
-  soft: {
-    label: "ソフト",
-    page: "bg-orange-50",
-    phone: "bg-[#fffaf5]",
-    panel: "bg-[#fffaf5]",
-    text: "text-stone-950",
-    sub: "text-stone-500",
-    border: "border-stone-200",
-    button: "bg-stone-900 text-white",
-    accent: "text-orange-500",
-    soft: "bg-orange-100/60",
-    input: "bg-white border-stone-200 text-stone-950 placeholder:text-stone-400",
-  },
+  }
 };
+
+function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSettings {
+  const merged = { ...initialSettings, ...(value || {}) } as XSettings;
+  if (merged.themeKey !== "dark") merged.themeKey = "light";
+  if ((merged as any).screenType === "detail") merged.screenType = "timeline";
+  if (!["timeline", "notifications", "profile"].includes(merged.screenType)) merged.screenType = "timeline";
+  return merged;
+}
 
 function StatusCellDots({ className = "" }: { className?: string }) {
   return (
@@ -439,7 +409,8 @@ export default function XMockCreator() {
   const [presetName, setPresetName] = useState("X投稿_01");
   const [savedPresets, setSavedPresets] = useState<SavedPreset[]>([]);
 
-  const theme = themes[settings.themeKey];
+  const theme = themes[settings.themeKey] || themes.light;
+  const statusBarVisible = settings.showStatusBar && !settings.fullScreenMode;
   const displayReplyCount = settings.replyCount + settings.replies.length;
   const displayLikeCount = settings.likeCount + (settings.liked ? 1 : 0);
   const displayRepostCount = settings.repostCount + (settings.reposted ? 1 : 0);
@@ -451,7 +422,7 @@ export default function XMockCreator() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setSettings({ ...initialSettings, ...JSON.parse(saved) });
+      if (saved) setSettings(normalizeXSettings(JSON.parse(saved)));
       const presets = localStorage.getItem(SAVED_STORAGE_KEY);
       if (presets) setSavedPresets(JSON.parse(presets));
     } catch {
@@ -560,16 +531,16 @@ export default function XMockCreator() {
 
   const header = (
     <>
-      {settings.showStatusBar && <ChatStatusBar time={settings.deviceTime} className="px-5 pb-2 pt-3" />}
-      <div className={cls("flex items-center justify-between border-b px-4 py-3", theme.border)}>
-        <div className="flex items-center gap-3">
+      {statusBarVisible && <ChatStatusBar time={settings.deviceTime} className="px-5 pb-2 pt-3" />}
+      <div className={cls("relative flex h-[54px] items-center justify-center border-b px-4", theme.border)}>
+        <button type="button" className="absolute left-4 grid h-9 w-9 place-items-center rounded-full active:bg-current/5" aria-label="戻る">
           <ArrowLeft className="h-5 w-5" />
-          <div>
-            <div className="text-[15px] font-black leading-none">{settings.screenType === "timeline" ? settings.appName : settings.screenType === "notifications" ? "通知" : "ポスト"}</div>
-            <div className={cls("mt-1 text-[11px]", theme.sub)}>{settings.appName}</div>
-          </div>
+        </button>
+        <div className="min-w-0 max-w-[62%] text-center">
+          <div className="truncate text-[16px] font-black leading-tight">{settings.appName}</div>
+          <div className={cls("mt-0.5 text-[10px]", theme.sub)}>{settings.screenType === "notifications" ? "通知" : settings.screenType === "profile" ? "プロフィール" : "タイムライン"}</div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="absolute right-4 flex items-center gap-3">
           <Search className="h-5 w-5" />
           <MoreHorizontal className="h-5 w-5" />
         </div>
@@ -703,19 +674,54 @@ export default function XMockCreator() {
     </div>
   );
 
+
+
+  const profileScreen = (
+    <div>
+      <div className="relative">
+        <div className={cls("h-32 w-full overflow-hidden", settings.profileCoverImage ? "bg-black" : "bg-gradient-to-br from-sky-200 via-indigo-200 to-slate-300")}>
+          {settings.profileCoverImage && <img src={settings.profileCoverImage} alt="プロフィールカバー" className="h-full w-full object-cover" />}
+        </div>
+        <div className="px-4 pb-4">
+          <div className="-mt-10 flex items-end justify-between">
+            <Avatar image={settings.avatarImage} label={settings.avatarLabel} size="h-20 w-20" className="border-4 border-current/10" />
+            <button type="button" className={cls("rounded-full border px-4 py-1.5 text-sm font-black", theme.border)}>編集</button>
+          </div>
+          <div className="mt-3 flex items-center gap-1">
+            <h2 className="text-xl font-black leading-tight">{settings.displayName}</h2>
+            {settings.verified && <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-500 text-white"><Check className="h-3.5 w-3.5" /></span>}
+          </div>
+          <div className={cls("text-sm", theme.sub)}>@{settings.username}</div>
+          <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{settings.profileBio}</div>
+          <div className={cls("mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs", theme.sub)}>
+            <span>{settings.profileLocation}</span>
+            <span>{settings.profileJoined}</span>
+          </div>
+          <div className="mt-3 flex gap-4 text-sm">
+            <span><b>{settings.profileFollowingCount}</b> <span className={theme.sub}>フォロー中</span></span>
+            <span><b>{settings.profileFollowerCount}</b> <span className={theme.sub}>フォロワー</span></span>
+          </div>
+        </div>
+        <div className={cls("grid grid-cols-3 border-b text-center text-sm font-bold", theme.border)}>
+          <div className="border-b-2 border-current py-3">ポスト</div>
+          <div className={cls("py-3", theme.sub)}>返信</div>
+          <div className={cls("py-3", theme.sub)}>メディア</div>
+        </div>
+      </div>
+      {postBlock(true)}
+      {settings.timelinePosts.map((post) => timelinePostBlock(post))}
+    </div>
+  );
   const phoneContent = (
     <div className={cls("relative h-full overflow-hidden", theme.phone, theme.text)}>
       {header}
-      <div className="h-[calc(100%-86px)] overflow-y-auto pb-20">
-        {settings.screenType === "notifications" ? notificationsScreen : (
+      <div className={cls(statusBarVisible ? "h-[calc(100%-86px)]" : "h-[calc(100%-54px)]", "overflow-y-auto pb-20")}>
+        {settings.screenType === "notifications" ? notificationsScreen : settings.screenType === "profile" ? profileScreen : (
           <>
-            {settings.screenType === "timeline" && <div className={cls("border-b px-4 py-3 text-sm font-black", theme.border)}>おすすめ</div>}
-            {postBlock(settings.screenType === "timeline")}
-            {settings.screenType === "timeline" ? (
-              <>
-                {settings.timelinePosts.map((post) => timelinePostBlock(post))}
-              </>
-            ) : repliesBlock}
+            <div className={cls("border-b px-4 py-3 text-sm font-black", theme.border)}>おすすめ</div>
+            {postBlock(true)}
+            {replyPanelOpen && repliesBlock}
+            {settings.timelinePosts.map((post) => timelinePostBlock(post))}
           </>
         )}
       </div>
@@ -745,10 +751,11 @@ export default function XMockCreator() {
                 <div className="h-10 w-10" aria-hidden="true" />
               </div>
 
-              <div className="grid shrink-0 grid-cols-7 rounded-2xl bg-black/5 p-1 text-center">
+              <div className="grid shrink-0 grid-cols-4 rounded-2xl bg-black/5 p-1 text-center">
               <TabButton active={activeTab === "create"} onClick={() => setActiveTab("create")}>作成</TabButton>
               <TabButton active={activeTab === "replies"} onClick={() => setActiveTab("replies")}>返信</TabButton>
                 <TabButton active={activeTab === "timeline"} onClick={() => setActiveTab("timeline")}>TL</TabButton>
+              <TabButton active={activeTab === "profile"} onClick={() => setActiveTab("profile")}>プロフィール</TabButton>
               <TabButton active={activeTab === "notifications"} onClick={() => setActiveTab("notifications")}>通知</TabButton>
               <TabButton active={activeTab === "saved"} onClick={() => setActiveTab("saved")}>保存</TabButton>
               <TabButton active={activeTab === "screen"} onClick={() => setActiveTab("screen")}>画面</TabButton>
@@ -761,7 +768,7 @@ export default function XMockCreator() {
                 <>
                   <SectionCard icon={Palette} title="表示タイプ / テーマ">
                     <div className="grid grid-cols-3 gap-2">
-                      {(["detail", "timeline", "notifications"] as XScreenType[]).map((type) => <Button key={type} variant={settings.screenType === type ? "primary" : "outline"} onClick={() => update("screenType", type)} className="px-2">{type === "detail" ? "投稿詳細" : type === "timeline" ? "タイムライン" : "通知"}</Button>)}
+                      {(["timeline", "notifications", "profile"] as XScreenType[]).map((type) => <Button key={type} variant={settings.screenType === type ? "primary" : "outline"} onClick={() => update("screenType", type)} className="px-2">{type === "timeline" ? "タイムライン" : type === "notifications" ? "通知" : "プロフィール"}</Button>)}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {(Object.keys(themes) as XThemeKey[]).map((key) => <Button key={key} variant={settings.themeKey === key ? "primary" : "outline"} onClick={() => update("themeKey", key)}>{themes[key].label}</Button>)}
@@ -871,6 +878,36 @@ export default function XMockCreator() {
                 </>
               )}
 
+              {activeTab === "profile" && (
+                <>
+                  <SectionCard icon={UserCircle2} title="プロフィール画面">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="表示名" value={settings.displayName} onChange={(v) => update("displayName", v)} />
+                      <Field label="ユーザー名" value={settings.username} onChange={(v) => update("username", v)} />
+                      <Field label="アイコン文字" value={settings.avatarLabel} onChange={(v) => update("avatarLabel", v.slice(0, 2))} />
+                      <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>アイコン画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("avatarImage", url))} className="text-xs" /></label>
+                    </div>
+                    <label className="grid gap-1.5 text-sm font-semibold text-black/70"><span>カバー画像</span><input type="file" accept="image/*" onChange={(e: ChangeEvent<HTMLInputElement>) => e.target.files?.[0] && readImageFile(e.target.files[0], (url) => update("profileCoverImage", url))} className="text-xs" /></label>
+                    <TextArea label="プロフィール文" value={settings.profileBio} onChange={(v) => update("profileBio", v)} rows={4} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="場所" value={settings.profileLocation} onChange={(v) => update("profileLocation", v)} />
+                      <Field label="開始日" value={settings.profileJoined} onChange={(v) => update("profileJoined", v)} />
+                      <Field label="フォロー数" value={settings.profileFollowingCount} onChange={(v) => update("profileFollowingCount", v)} />
+                      <Field label="フォロワー数" value={settings.profileFollowerCount} onChange={(v) => update("profileFollowerCount", v)} />
+                      <Field label="投稿数" value={settings.profilePostCount} onChange={(v) => update("profilePostCount", v)} />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant={settings.verified ? "primary" : "outline"} onClick={() => update("verified", !settings.verified)}>認証バッジ</Button>
+                      <Button variant="outline" onClick={() => update("profileCoverImage", null)}>カバー削除</Button>
+                    </div>
+                  </SectionCard>
+                  <SectionCard icon={MessageCircle} title="プロフィールに表示する投稿">
+                    <p className="text-sm text-black/50">プロフィール画面には、メイン投稿とタイムライン投稿が表示されます。投稿内容は「作成」「TL」タブから編集できます。</p>
+                    <Button onClick={() => update("screenType", "profile")}>プロフィール画面を表示</Button>
+                  </SectionCard>
+                </>
+              )}
+
               {activeTab === "notifications" && (
                 <>
                   <SectionCard icon={Bell} title="通知一覧">
@@ -916,7 +953,7 @@ export default function XMockCreator() {
                         <div className="font-bold">{preset.name}</div>
                         <div className="mb-2 text-xs text-black/45">{preset.savedAt}</div>
                         <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" onClick={() => setSettings({ ...initialSettings, ...preset.settings })}>読み込み</Button>
+                          <Button variant="outline" onClick={() => setSettings(normalizeXSettings(preset.settings))}>読み込み</Button>
                           <Button variant="outline" onClick={() => overwritePreset(preset.id)}>上書き</Button>
                           <Button variant="outline" onClick={() => duplicatePreset(preset)}>複製</Button>
                           <Button variant="danger" onClick={() => removePreset(preset.id)}>削除</Button>
