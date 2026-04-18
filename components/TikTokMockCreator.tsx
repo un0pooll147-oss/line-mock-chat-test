@@ -393,15 +393,28 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
 
       {settings.showStatusBar && !isFullScreen && <div className="absolute left-0 right-0 top-0 z-20"><StatusBar time={settings.deviceTime} /></div>}
 
-      <header className={cn("absolute left-0 right-0 z-20 flex items-center justify-between px-4", settings.showStatusBar && !isFullScreen ? "top-9" : "top-3")}> 
-        <div className="w-10" />
-        <div className="text-center">
-          <div className="text-base font-extrabold tracking-tight">{settings.appName}</div>
-          <div className="text-[11px] text-white/70">おすすめ</div>
+      <header className={cn("absolute left-0 right-0 z-20 px-3", settings.showStatusBar && !isFullScreen ? "top-9" : "top-3")}>
+        <div className="grid grid-cols-[54px_1fr_88px] items-center gap-1 text-white drop-shadow">
+          <div className="flex items-center">
+            <span className="rounded-full border border-white/70 px-2 py-0.5 text-[11px] font-extrabold leading-none tracking-tight">LIVE</span>
+          </div>
+          <div className="flex min-w-0 items-center justify-center gap-3 overflow-hidden text-[13px] font-bold text-white/70">
+            {["探す", "ミニドラマ", "フォロー中", "ショップ", "おすすめ"].map((label) => (
+              <span key={label} className={cn("relative shrink-0 pb-1", label === "おすすめ" && "text-white")}>
+                {label}
+                {label === "おすすめ" && <span className="absolute bottom-0 left-1/2 h-0.5 w-5 -translate-x-1/2 rounded-full bg-white" />}
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-1">
+            <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur" aria-label="検索">
+              <Search className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={onOpenSettings} className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur" aria-label="設定">
+              <MoreHorizontal className="h-6 w-6" />
+            </button>
+          </div>
         </div>
-        <button type="button" onClick={onOpenSettings} className="flex h-10 w-10 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur" aria-label="設定">
-          <MoreHorizontal className="h-6 w-6" />
-        </button>
       </header>
 
       {media.length > 1 && (
@@ -441,10 +454,13 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
 
       <nav className="absolute bottom-0 left-0 right-0 z-20 grid h-14 grid-cols-5 items-center border-t border-white/10 bg-black/35 text-white backdrop-blur-md">
         <button className="flex flex-col items-center gap-0.5 text-[10px]"><Home className="h-5 w-5" />ホーム</button>
-        <button className="flex flex-col items-center gap-0.5 text-[10px]"><Search className="h-5 w-5" />検索</button>
-        <button className="mx-auto flex h-8 w-12 items-center justify-center rounded-xl bg-white text-black"><Plus className="h-5 w-5" /></button>
-        <button className="flex flex-col items-center gap-0.5 text-[10px]"><Bell className="h-5 w-5" />通知</button>
-        <button className="flex flex-col items-center gap-0.5 text-[10px]"><UserCircle2 className="h-5 w-5" />自分</button>
+        <button className="flex flex-col items-center gap-0.5 text-[10px]"><UserCircle2 className="h-5 w-5" />友達</button>
+        <button className="mx-auto flex flex-col items-center gap-0.5 text-[10px]">
+          <span className="flex h-8 w-12 items-center justify-center rounded-xl bg-white text-black"><Plus className="h-5 w-5" /></span>
+          投稿
+        </button>
+        <button className="flex flex-col items-center gap-0.5 text-[10px]"><MessageCircle className="h-5 w-5" />メッセージ</button>
+        <button className="flex flex-col items-center gap-0.5 text-[10px]"><UserCircle2 className="h-5 w-5" />プロフィール</button>
       </nav>
 
       {commentsOpen && <CommentsSheet settings={settings} setSettings={setSettings} onClose={() => setCommentsOpen(false)} />}
@@ -521,12 +537,34 @@ export default function TikTokMockCreator() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // 動画など大きいファイルはブラウザの保存容量を超えることがあるため、
+      // 画面上の表示は維持しつつ、保存時だけメディアを除外してクラッシュを防ぐ。
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...settings, mediaItems: [], currentMediaIndex: 0 }));
+      } catch {
+        // 保存できない場合も撮影用プレビューは継続する。
+      }
+    }
   }, [settings, isHydrated]);
 
   useEffect(() => {
     if (!isHydrated) return;
-    window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(savedPresets));
+    try {
+      window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(savedPresets));
+    } catch {
+      const slimPresets = savedPresets.map((preset) => ({
+        ...preset,
+        settings: { ...preset.settings, mediaItems: [], currentMediaIndex: 0 },
+      }));
+      try {
+        window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(slimPresets));
+      } catch {
+        // 保存容量超過時は無視する。
+      }
+    }
   }, [savedPresets, isHydrated]);
 
   const update = <K extends keyof TikTokSettings>(key: K, value: TikTokSettings[K]) => setSettings((prev) => ({ ...prev, [key]: value }));
