@@ -1511,15 +1511,7 @@ export default function LineMockChatCreator() {
                 <X className="h-5 w-5" />
               </button>
               <div className="text-lg font-semibold">設定</div>
-              <button
-                type="button"
-                onClick={() => router.push("/notification")}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.07] whitespace-nowrap"
-                aria-label="通知画面モードへ"
-              >
-                <span>通知画面モードへ</span>
-                <span className="text-base">→</span>
-              </button>
+              <div className="h-10 w-10" aria-hidden="true" />
             </div>
 
             <div className="grid grid-cols-6 rounded-2xl bg-black/5 p-1 text-center">

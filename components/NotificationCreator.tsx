@@ -1751,7 +1751,6 @@ export default function NotificationCreator() {
                     <Switch checked={showSettingsButton} onCheckedChange={setShowSettingsButton} />
                   </div>
                   <Button onClick={() => setSettingsOpen(false)} className="w-full">設定を閉じて撮影画面に戻る</Button>
-                  <Button onClick={() => router.push("/")} variant="outline" className="w-full"><span className="mr-2">←</span>チャット画面へ戻る</Button>
                 </SectionCard>
 
                 <SectionCard icon={Phone} title="通話設定">
