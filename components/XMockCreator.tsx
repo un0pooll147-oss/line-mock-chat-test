@@ -138,6 +138,7 @@ type XSettings = {
 };
 
 const STORAGE_KEY = "x-mock-settings-v1";
+const DEFAULT_STORAGE_KEY = "x-mock-default-settings-v1";
 const SAVED_STORAGE_KEY = "x-mock-saved-presets-v1";
 
 const initialSettings: XSettings = {
@@ -274,6 +275,17 @@ function normalizeXSettings(value: Partial<XSettings> | null | undefined): XSett
   merged.timelinePosts = (merged.timelinePosts || []).map((post: any) => ({ ...post, images: Array.isArray(post.images) ? post.images.slice(0, 4) : [] }));
   merged.profilePosts = (merged.profilePosts || []).map((post: any) => ({ ...post, time: post.time === "固定" ? "2026年4月18日 21:00" : post.time, images: Array.isArray(post.images) ? post.images.slice(0, 4) : [] }));
   return merged;
+}
+
+
+function readStoredDefaultSettings(): XSettings {
+  if (typeof window === "undefined") return initialSettings;
+  try {
+    const raw = localStorage.getItem(DEFAULT_STORAGE_KEY);
+    return raw ? normalizeXSettings(JSON.parse(raw)) : initialSettings;
+  } catch {
+    return initialSettings;
+  }
 }
 
 function StatusCellDots({ className = "" }: { className?: string }) {
@@ -654,6 +666,20 @@ export default function XMockCreator() {
   };
 
   const removePreset = (id: string) => setSavedPresets((prev) => prev.filter((preset) => preset.id !== id));
+
+
+  const saveCurrentAsDefaultSettings = () => {
+    try { localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify(settings)); } catch {}
+  };
+
+  const resetToStoredDefaultSettings = () => {
+    setSettings(readStoredDefaultSettings());
+  };
+
+  const resetToInitialSettings = () => {
+    try { localStorage.removeItem(DEFAULT_STORAGE_KEY); } catch {}
+    setSettings(initialSettings);
+  };
 
   const setFullscreenMode = async (enabled: boolean) => {
     update("fullScreenMode", enabled);
@@ -1221,6 +1247,13 @@ export default function XMockCreator() {
 
               {activeTab === "screen" && (
                 <>
+                  <SectionCard icon={Palette} title="規定・初期化">
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button variant="outline" onClick={saveCurrentAsDefaultSettings}>規定の設定にする</Button>
+                      <Button variant="outline" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
+                      <Button variant="outline" onClick={resetToInitialSettings}>初期設定に戻す</Button>
+                    </div>
+                  </SectionCard>
                   <SectionCard icon={Settings2} title="撮影表示">
                     <Field label="ステータスバー時刻" value={settings.deviceTime} onChange={(v) => update("deviceTime", v)} />
                     <div className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-bold">ステータスバー表示</div><div className="text-xs text-black/50">チャットモードと同じアイコン</div></div><Switch checked={settings.showStatusBar} onChange={(v) => update("showStatusBar", v)} /></div>

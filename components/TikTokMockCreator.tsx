@@ -78,6 +78,7 @@ type SavedTikTokPreset = {
 };
 
 const STORAGE_KEY = "tiktok-mock-settings-v1";
+const DEFAULT_STORAGE_KEY = "tiktok-mock-default-settings-v1";
 const SAVED_STORAGE_KEY = "tiktok-mock-saved-presets-v1";
 
 const themes: Record<TikTokThemeKey, {
@@ -191,6 +192,28 @@ const readStoredSettings = (): TikTokSettings => {
     if (!Number.isFinite(Number(merged.currentMediaIndex))) merged.currentMediaIndex = 0;
     merged.currentMediaIndex = Math.max(0, Math.min(merged.currentMediaIndex, Math.max(merged.mediaItems.length - 1, 0)));
     return merged;
+  } catch {
+    return defaultSettings;
+  }
+};
+
+
+const normalizeTikTokSettings = (value: Partial<TikTokSettings> | null | undefined): TikTokSettings => {
+  const merged = { ...defaultSettings, ...(value || {}) } as TikTokSettings;
+  if (merged.themeKey !== "dark") merged.themeKey = "basic";
+  if (!Array.isArray(merged.mediaItems)) merged.mediaItems = [];
+  merged.mediaItems = merged.mediaItems.slice(0, 4);
+  if (!Array.isArray(merged.comments)) merged.comments = defaultSettings.comments;
+  if (!Number.isFinite(Number(merged.currentMediaIndex))) merged.currentMediaIndex = 0;
+  merged.currentMediaIndex = Math.max(0, Math.min(merged.currentMediaIndex, Math.max(merged.mediaItems.length - 1, 0)));
+  return merged;
+};
+
+const readStoredDefaultSettings = (): TikTokSettings => {
+  if (typeof window === "undefined") return defaultSettings;
+  try {
+    const raw = window.localStorage.getItem(DEFAULT_STORAGE_KEY);
+    return raw ? normalizeTikTokSettings(JSON.parse(raw)) : defaultSettings;
   } catch {
     return defaultSettings;
   }
@@ -379,7 +402,7 @@ function TikTokScreen({ settings, setSettings, onOpenSettings, commentsOpen, set
     if (media.length <= 1) return;
     setSettings((prev) => ({ ...prev, currentMediaIndex: (prev.currentMediaIndex + delta + media.length) % media.length }));
   };
-  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = (event: any) => {
     if (touchStartX === null || media.length <= 1) return;
     const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
     const distance = touchEndX - touchStartX;
@@ -623,6 +646,20 @@ export default function TikTokMockCreator() {
     }
   };
 
+
+  const saveCurrentAsDefaultSettings = () => {
+    try { window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify(settings)); } catch {}
+  };
+
+  const resetToStoredDefaultSettings = () => {
+    setSettings(readStoredDefaultSettings());
+  };
+
+  const resetToInitialSettings = () => {
+    try { window.localStorage.removeItem(DEFAULT_STORAGE_KEY); } catch {}
+    setSettings(defaultSettings);
+  };
+
   const setFullScreenMode = (value: boolean) => {
     update("fullScreenMode", value);
     void requestBrowserFullscreen(value);
@@ -832,13 +869,22 @@ export default function TikTokMockCreator() {
                 )}
 
                 {activeTab === "screen" && (
-                  <SectionCard icon={Settings2} title="画面表示">
+                  <>
+                    <SectionCard icon={Palette} title="規定・初期化">
+                      <div className="grid grid-cols-1 gap-2">
+                        <Button variant="outline" onClick={saveCurrentAsDefaultSettings}>規定の設定にする</Button>
+                        <Button variant="outline" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
+                        <Button variant="outline" onClick={resetToInitialSettings}>初期設定に戻す</Button>
+                      </div>
+                    </SectionCard>
+                    <SectionCard icon={Settings2} title="画面表示">
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">フルスクリーンモード</div><div className="text-xs text-black/50">URLバーや余白を減らして撮影向きにします</div></div><Switch checked={settings.fullScreenMode} onCheckedChange={setFullScreenMode} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">端末フレーム</div><div className="text-xs text-black/50">黒いスマホ枠を表示します</div></div><Switch checked={settings.deviceFrameMode} onCheckedChange={(value) => update("deviceFrameMode", value)} /></div>
                     <div className="space-y-1"><Label>ステータスバー時刻</Label><Input value={settings.deviceTime} onChange={(e) => update("deviceTime", e.target.value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">ステータスバー表示</div><div className="text-xs text-black/50">端末上部の時刻・電波アイコンを表示</div></div><Switch checked={settings.showStatusBar} onCheckedChange={(value) => update("showStatusBar", value)} /></div>
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダでも設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(value) => update("showSettingsButton", value)} /></div>
-                  </SectionCard>
+                    </SectionCard>
+                  </>
                 )}
 
                 {activeTab === "modes" && (

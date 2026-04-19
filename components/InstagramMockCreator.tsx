@@ -77,6 +77,7 @@ type InstagramSettings = {
 };
 
 const STORAGE_KEY = "instagram-mock-settings-v2";
+const DEFAULT_STORAGE_KEY = "instagram-mock-default-settings-v1";
 const SAVED_INSTAGRAM_STORAGE_KEY = "instagram-mock-saved-presets-v1";
 
 type SavedInstagramPreset = {
@@ -167,6 +168,29 @@ const defaultSettings: InstagramSettings = {
 const cn = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ");
 
 const isVideoUrl = (url: string | null | undefined) => Boolean(url && (url.startsWith("data:video/") || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)));
+
+
+const normalizeInstagramSettings = (value: Partial<InstagramSettings> | null | undefined): InstagramSettings => {
+  const merged = { ...defaultSettings, ...(value || {}) } as InstagramSettings;
+  if (merged.themeKey !== "dark") merged.themeKey = "instagram";
+  if ((!merged.postImages || merged.postImages.length === 0) && merged.postImage) merged.postImages = [merged.postImage];
+  if ((!merged.storyImages || merged.storyImages.length === 0) && merged.storyImage) merged.storyImages = [merged.storyImage];
+  if (!Array.isArray(merged.postImages)) merged.postImages = [];
+  if (!Array.isArray(merged.storyImages)) merged.storyImages = [];
+  if (!Array.isArray(merged.comments)) merged.comments = defaultSettings.comments;
+  if (!Array.isArray(merged.storyMessages)) merged.storyMessages = [];
+  return merged;
+};
+
+const readStoredDefaultSettings = (): InstagramSettings => {
+  if (typeof window === "undefined") return defaultSettings;
+  try {
+    const raw = window.localStorage.getItem(DEFAULT_STORAGE_KEY);
+    return raw ? normalizeInstagramSettings(JSON.parse(raw)) : defaultSettings;
+  } catch {
+    return defaultSettings;
+  }
+};
 
 const readStoredSettings = (): InstagramSettings => {
   if (typeof window === "undefined") return defaultSettings;
@@ -930,6 +954,22 @@ export default function InstagramMockCreator() {
     persistSavedPresets([{ ...item, id: `instagram-saved-${Date.now()}-${Math.random().toString(16).slice(2)}`, name: `${item.name} コピー`, updatedAt: Date.now() }, ...savedPresets]);
   };
 
+
+  const saveCurrentAsDefaultSettings = () => {
+    try {
+      window.localStorage.setItem(DEFAULT_STORAGE_KEY, JSON.stringify(settings));
+    } catch {}
+  };
+
+  const resetToStoredDefaultSettings = () => {
+    setSettings(readStoredDefaultSettings());
+  };
+
+  const resetToInitialSettings = () => {
+    try { window.localStorage.removeItem(DEFAULT_STORAGE_KEY); } catch {}
+    setSettings(defaultSettings);
+  };
+
   const enterFullscreenIfNeeded = async (enabled: boolean) => {
     update("fullScreenMode", enabled);
     if (enabled && typeof document !== "undefined" && !document.fullscreenElement) {
@@ -1146,8 +1186,12 @@ export default function InstagramMockCreator() {
                     <div className="flex items-center justify-between rounded-2xl border border-black/10 p-3"><div><div className="text-sm font-medium">設定ボタン表示</div><div className="text-xs text-black/50">撮影時はOFFにできます。右上三点リーダで設定画面が出ます</div></div><Switch checked={settings.showSettingsButton} onCheckedChange={(v) => update("showSettingsButton", v)} /></div>
                   </SectionCard>
 
-                  <SectionCard icon={Palette} title="初期化">
-                    <Button variant="outline" className="w-full" onClick={() => setSettings(defaultSettings)}>Instagramモードを初期設定に戻す</Button>
+                  <SectionCard icon={Palette} title="規定・初期化">
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button variant="outline" className="w-full" onClick={saveCurrentAsDefaultSettings}>規定の設定にする</Button>
+                      <Button variant="outline" className="w-full" onClick={resetToStoredDefaultSettings}>規定の設定に戻す</Button>
+                      <Button variant="outline" className="w-full" onClick={resetToInitialSettings}>初期設定に戻す</Button>
+                    </div>
                   </SectionCard>
                 </div>
               )}

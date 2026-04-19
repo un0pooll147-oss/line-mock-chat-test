@@ -1911,7 +1911,8 @@ export default function NotificationCreator() {
             {activeTab === "screen" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
-                  <Button onClick={saveCurrentAsDefault} variant="outline" className="w-full justify-center">今の設定を既定にする</Button>
+                  <Button onClick={saveCurrentAsDefault} variant="outline" className="w-full justify-center">規定の設定にする</Button>
+                  <Button onClick={resetToDefault} variant="outline" className="w-full justify-center">初期設定に戻す</Button>
                 </div>
 
                 <SectionCard icon={Settings2} title="画面操作">
@@ -2013,10 +2014,7 @@ export default function NotificationCreator() {
                   </div>
                 </SectionCard>
 
-                <SectionCard icon={UserCircle2} title="リセット">
-                  <div className="text-sm text-black/60">通知画面の見た目や通知内容を初期状態に戻します。</div>
-                  <Button onClick={resetToDefault} variant="outline" className="w-full">通知画面を初期設定に戻す</Button>
-                </SectionCard>
+
               </div>
             )}
           </div>
