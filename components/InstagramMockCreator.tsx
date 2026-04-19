@@ -947,15 +947,15 @@ export default function InstagramMockCreator() {
   );
 
   const stage = settings.deviceFrameMode ? (
-    <div className={cn("mx-auto flex min-h-[100dvh] flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
-      <div className="relative flex-1 overflow-hidden p-4">
-        <div className="relative h-full min-h-[calc(100dvh-32px)] w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
+    <div className={cn("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
+        <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {screen}
         </div>
       </div>
     </div>
   ) : (
-    <div className={cn("mx-auto h-[100dvh] w-full bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor }}>
+    <div className={cn("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor }}>
       {screen}
     </div>
   );

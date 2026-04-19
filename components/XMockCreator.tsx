@@ -923,15 +923,15 @@ export default function XMockCreator() {
   );
 
   const phone = settings.deviceFrameMode ? (
-    <div className={cls("mx-auto flex min-h-[100dvh] flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
-      <div className="relative flex-1 overflow-hidden p-4">
-        <div className="relative h-full min-h-[calc(100dvh-32px)] w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
+    <div className={cls("mx-auto flex h-[100dvh] min-h-0 flex-col bg-black", settings.fullScreenMode ? "max-w-none" : "max-w-md")}>
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden p-4">
+        <div className="relative h-full min-h-0 w-full overflow-hidden rounded-[32px] border border-white/10 bg-black shadow-2xl">
           {phoneContent}
         </div>
       </div>
     </div>
   ) : (
-    <div className="mx-auto h-[100dvh] w-full max-w-md overflow-hidden bg-white" style={{ backgroundColor: settings.bgColor || undefined }}>
+    <div className={cls("mx-auto h-[100dvh] min-h-0 w-full overflow-hidden bg-white", settings.fullScreenMode ? "max-w-none" : "max-w-md")} style={{ backgroundColor: settings.bgColor || undefined }}>
       {phoneContent}
     </div>
   );
