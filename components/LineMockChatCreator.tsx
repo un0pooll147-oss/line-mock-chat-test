@@ -217,6 +217,7 @@ function normalizeStoredMessages(messages: any[] | undefined) {
     date: String(msg?.date ?? ""),
     time: String(msg?.time ?? ""),
     visible: typeof msg?.visible === "boolean" ? msg.visible : true,
+    canceled: typeof msg?.canceled === "boolean" ? msg.canceled : false,
   }));
 }
 
@@ -288,15 +289,15 @@ function getCurrentTime() {
 }
 
 function buildOutgoingMessage(text: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "text", sender: "", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
 }
 
 function buildIncomingMessage(text: string, sender: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "left", type: "text", sender: sender || "相手", text, image: "", date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
 }
 
 function buildOutgoingImageMessage(image: string, timeOverride: string, dateOverride = "") {
-  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime(), visible: true };
+  return { id: Date.now() + Math.floor(Math.random() * 1000), side: "right", type: "image", sender: "", text: "", image, date: dateOverride, time: timeOverride || getCurrentTime(), visible: true, canceled: false };
 }
 
 function cn(...classes: (string | boolean | undefined | null)[]) {
@@ -347,6 +348,7 @@ interface Message {
   date: string;
   time: string;
   visible?: boolean;
+  canceled?: boolean;
 }
 
 function compareMessagesAsc(a: Message, b: Message) {
@@ -456,6 +458,7 @@ interface Theme {
 const PhoneMockup = React.forwardRef<HTMLDivElement, {
   onStartCall?: (type: string) => void;
   onOpenSettings?: () => void;
+  onCancelMessage?: (id: number) => void;
   title: string;
   messages: Message[];
   typingText: string;
@@ -470,12 +473,38 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
   wallpaper: string;
   unifyWallpaper?: boolean;
   bottomPadding?: number;
-}>(function PhoneMockup({ onStartCall, onOpenSettings, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
+}>(function PhoneMockup({ onStartCall, onOpenSettings, onCancelMessage, title, messages, typingText, isTyping, theme, avatarImage, avatarLabel, deviceTime, showStatusBar, showMessageTime, todayDate, wallpaper, unifyWallpaper = false, bottomPadding = 96 }, ref) {
   const mutedColor = theme.name === "ダーク" ? "text-white/60" : "text-black/55";
   const timeColor = theme.name === "ダーク" ? "text-white/45" : "text-black/40";
   const headerIconStyle = { color: theme.headerIconColor };
   const sortedMessages = useMemo(() => [...messages].filter((msg) => msg.visible !== false).sort(compareMessagesAsc), [messages]);
   const messageScrollRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const [cancelMenuMessageId, setCancelMenuMessageId] = useState<number | null>(null);
+
+  const clearLongPressTimer = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const startCancelLongPress = (msg: Message) => {
+    if (msg.side !== "right" || msg.canceled) return;
+    clearLongPressTimer();
+    longPressTimerRef.current = window.setTimeout(() => {
+      setCancelMenuMessageId(msg.id);
+      longPressTimerRef.current = null;
+    }, 520);
+  };
+
+  const cancelSentMessage = (id: number) => {
+    clearLongPressTimer();
+    setCancelMenuMessageId(null);
+    onCancelMessage?.(id);
+  };
+
+  useEffect(() => () => clearLongPressTimer(), []);
 
   useEffect(() => {
     const el = messageScrollRef.current;
@@ -504,7 +533,7 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
         </div>
       </div>
 
-      <div className="relative flex-1 min-h-0" style={chatAreaStyle}>
+      <div className="relative flex-1 min-h-0" style={chatAreaStyle} onClick={() => setCancelMenuMessageId(null)}>
         <div ref={messageScrollRef} className="absolute inset-0 overflow-y-auto px-3 pt-4" style={{ paddingBottom: bottomPadding }}>
           <div className="flex flex-col gap-3">
             {sortedMessages.map((msg, index) => {
@@ -522,22 +551,48 @@ const PhoneMockup = React.forwardRef<HTMLDivElement, {
                   <div className={`flex ${msg.side === "right" ? "justify-end" : "justify-start"}`}>
                     <div className="max-w-[78%]">
                       {msg.side === "left" && <div className={`mb-1 px-1 text-[11px] ${mutedColor}`}>{msg.sender}</div>}
-                      <div
-                        className={cn(
-                          "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
-                          msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
-                          msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
+                        {cancelMenuMessageId === msg.id && (
+                          <button
+                            type="button"
+                            onClick={() => cancelSentMessage(msg.id)}
+                            className="absolute -top-11 right-0 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/85 px-3 py-2 text-xs font-semibold text-white shadow-lg active:scale-95"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            送信取消
+                          </button>
                         )}
-                        style={{
-                          backgroundColor: msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble,
-                          color: msg.type === "image" ? undefined : (msg.side === "right" ? theme.selfTextColor : theme.otherTextColor),
-                        }}
-                      >
-                        {msg.type === "image" && msg.image ? (
-                          <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" />
-                        ) : (
-                          <div className="whitespace-pre-wrap break-words">{msg.text}</div>
-                        )}
+                        <div
+                          role={msg.side === "right" && !msg.canceled ? "button" : undefined}
+                          tabIndex={msg.side === "right" && !msg.canceled ? 0 : undefined}
+                          onPointerDown={() => startCancelLongPress(msg)}
+                          onPointerUp={clearLongPressTimer}
+                          onPointerCancel={clearLongPressTimer}
+                          onPointerLeave={clearLongPressTimer}
+                          onContextMenu={(e) => {
+                            if (msg.side === "right" && !msg.canceled) {
+                              e.preventDefault();
+                              setCancelMenuMessageId(msg.id);
+                            }
+                          }}
+                          className={cn(
+                            "overflow-hidden text-[15px] leading-relaxed shadow-[0_1px_2px_rgba(0,0,0,0.08)] select-none",
+                            msg.canceled ? "rounded-[18px] px-4 py-2 text-black/45 shadow-none" : msg.type === "image" ? "rounded-[20px] p-1" : "rounded-[18px] px-4 py-2",
+                            msg.side === "right" ? "rounded-br-[6px]" : "rounded-bl-[6px]",
+                          )}
+                          style={{
+                            backgroundColor: msg.canceled ? "rgba(255,255,255,0.62)" : msg.type === "image" ? "rgba(255,255,255,0.72)" : msg.side === "right" ? theme.selfBubble : theme.otherBubble,
+                            color: msg.canceled ? undefined : msg.type === "image" ? undefined : (msg.side === "right" ? theme.selfTextColor : theme.otherTextColor),
+                          }}
+                        >
+                          {msg.canceled ? (
+                            <div className="whitespace-pre-wrap break-words text-[13px]">送信を取り消しました</div>
+                          ) : msg.type === "image" && msg.image ? (
+                            <img src={msg.image} alt="送信画像" className="block max-h-[320px] w-full rounded-[16px] object-cover" draggable={false} />
+                          ) : (
+                            <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                          )}
+                        </div>
                       </div>
                       {showMessageTime && <div className={cn("mt-1 px-1 text-[10px]", timeColor, msg.side === "right" ? "text-right" : "text-left")}>{msg.time}</div>}
                     </div>
@@ -1033,6 +1088,7 @@ export default function LineMockChatCreator() {
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
+  const cancelMessageSend = (id: number) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, type: "text", text: "送信を取り消しました", image: "", canceled: true, visible: true } : msg)));
   const clearAllMessages = () => {
     if (messages.length === 0) {
       showToast("削除する履歴がありません");
@@ -1432,6 +1488,7 @@ export default function LineMockChatCreator() {
                     ref={previewRef}
                     onStartCall={startCall}
                     onOpenSettings={openSettings}
+                    onCancelMessage={cancelMessageSend}
                     title={chatTitle}
                     messages={messages}
                     typingText={typingText}
@@ -1465,6 +1522,7 @@ export default function LineMockChatCreator() {
                   ref={previewRef}
                   onStartCall={startCall}
                   onOpenSettings={openSettings}
+                  onCancelMessage={cancelMessageSend}
                   title={chatTitle}
                   messages={messages}
                   typingText={typingText}
@@ -1670,8 +1728,14 @@ export default function LineMockChatCreator() {
                           <span className={cn("inline-flex rounded-full px-2 py-1 text-[11px]", msg.visible === false ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700")}>
                             {msg.visible === false ? "非表示" : "表示中"}
                           </span>
+                          {msg.canceled && <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">取消済み</span>}
                         </div>
                         <div className="flex items-center gap-2">
+                          {msg.side === "right" && !msg.canceled && (
+                            <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => cancelMessageSend(msg.id)}>
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />送信取消
+                            </Button>
+                          )}
                           <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => toggleMessageVisibility(msg.id)}>
                             {msg.visible === false ? "表示する" : "隠す"}
                           </Button>
@@ -1687,7 +1751,9 @@ export default function LineMockChatCreator() {
                             <option value="image">画像</option>
                           </select>
                         </div>
-                        {msg.type === "image" ? (
+                        {msg.canceled ? (
+                          <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-3 text-sm text-black/55">送信を取り消しました</div>
+                        ) : msg.type === "image" ? (
                           <div className="space-y-2">
                             <Label>画像</Label>
                             {msg.image ? <img src={msg.image} alt="履歴画像" className="max-h-56 w-full rounded-2xl border border-black/10 object-cover" /> : <div className="rounded-2xl border border-dashed border-black/10 p-4 text-sm text-black/45">画像が未設定です</div>}
