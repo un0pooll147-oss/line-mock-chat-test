@@ -218,6 +218,9 @@ function normalizeStoredMessages(messages: any[] | undefined) {
     time: String(msg?.time ?? ""),
     visible: typeof msg?.visible === "boolean" ? msg.visible : true,
     canceled: typeof msg?.canceled === "boolean" ? msg.canceled : false,
+    originalText: typeof msg?.originalText === "string" ? msg.originalText : "",
+    originalType: typeof msg?.originalType === "string" ? msg.originalType : "",
+    originalImage: typeof msg?.originalImage === "string" ? msg.originalImage : "",
   }));
 }
 
@@ -349,6 +352,9 @@ interface Message {
   time: string;
   visible?: boolean;
   canceled?: boolean;
+  originalText?: string;
+  originalType?: string;
+  originalImage?: string;
 }
 
 function compareMessagesAsc(a: Message, b: Message) {
@@ -1088,7 +1094,32 @@ export default function LineMockChatCreator() {
   };
 
   const deleteMessage = (id: number) => setMessages((prev) => prev.filter((msg) => msg.id !== id));
-  const cancelMessageSend = (id: number) => setMessages((prev) => prev.map((msg) => (msg.id === id ? { ...msg, type: "text", text: "送信を取り消しました", image: "", canceled: true, visible: true } : msg)));
+  const cancelMessageSend = (id: number) => setMessages((prev) => prev.map((msg) => (
+    msg.id === id
+      ? {
+          ...msg,
+          originalText: msg.originalText || msg.text || "",
+          originalType: msg.originalType || msg.type || "text",
+          originalImage: msg.originalImage || msg.image || "",
+          type: "text",
+          text: "送信を取り消しました",
+          image: "",
+          canceled: true,
+          visible: true,
+        }
+      : msg
+  )));
+  const restoreCanceledMessage = (id: number) => setMessages((prev) => prev.map((msg) => (
+    msg.id === id
+      ? {
+          ...msg,
+          type: msg.originalType || "text",
+          text: msg.originalText || "",
+          image: msg.originalImage || "",
+          canceled: false,
+        }
+      : msg
+  )));
   const clearAllMessages = () => {
     if (messages.length === 0) {
       showToast("削除する履歴がありません");
@@ -1736,6 +1767,11 @@ export default function LineMockChatCreator() {
                               <Trash2 className="mr-1.5 h-3.5 w-3.5" />送信取消
                             </Button>
                           )}
+                          {msg.side === "right" && msg.canceled && (
+                            <Button variant="outline" className="px-3 py-2 text-xs border-green-200 text-green-700 hover:bg-green-50" onClick={() => restoreCanceledMessage(msg.id)}>
+                              取消を元に戻す
+                            </Button>
+                          )}
                           <Button variant="outline" className="px-3 py-2 text-xs" onClick={() => toggleMessageVisibility(msg.id)}>
                             {msg.visible === false ? "表示する" : "隠す"}
                           </Button>
@@ -1752,7 +1788,10 @@ export default function LineMockChatCreator() {
                           </select>
                         </div>
                         {msg.canceled ? (
-                          <div className="rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-3 text-sm text-black/55">送信を取り消しました</div>
+                          <div className="space-y-2 rounded-2xl border border-black/10 bg-black/[0.03] px-3 py-3 text-sm text-black/55">
+                            <div>送信を取り消しました</div>
+                            <div className="text-xs text-black/40">「取消を元に戻す」で、取り消し前の内容に戻せます。</div>
+                          </div>
                         ) : msg.type === "image" ? (
                           <div className="space-y-2">
                             <Label>画像</Label>
